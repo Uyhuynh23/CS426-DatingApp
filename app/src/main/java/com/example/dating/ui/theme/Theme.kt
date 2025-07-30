@@ -11,6 +11,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 
 
 object GradientColor {
@@ -18,51 +19,4 @@ object GradientColor {
     val circleGradient: Brush = Circle_Gradient
     val mainBackground: Brush = MainBackground
     val mainBackground2: Brush = MainBackground2
-}
-
-private val DarkColorScheme = lightColorScheme(
-    primary = Main_Primary,
-    secondary = Main_Secondary1,
-    background = Main_PinkBackground,
-    surface = Main_Secondary1,
-    onPrimary = Text_White,
-    onSecondary = Text_Black,
-    onBackground = Text_Black,
-    onSurface = Text_Black,
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Main_Primary,
-    secondary = Main_Secondary1,
-    background = Main_PinkBackground,
-    surface = Main_Secondary1,
-    onPrimary = Text_White,
-    onSecondary = Text_Black,
-    onBackground = Text_Black,
-    onSurface = Text_Black,
-)
-
-
-@Composable
-fun DatingTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
 }

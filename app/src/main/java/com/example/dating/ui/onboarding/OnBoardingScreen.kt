@@ -24,7 +24,7 @@ import androidx.navigation.NavController
 import com.example.dating.R
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
-
+import com.example.dating.ui.theme.AppColor
 data class OnboardingPage(
     val image: Int,
     val title: String,
@@ -98,13 +98,14 @@ fun OnboardingScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = pages[page].title,
+                    color = AppColor.Main_Black,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
+                    fontSize = 24.sp
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = pages[page].description,
-                    color = Color.Gray,
+                    color = AppColor.Text_LightBlack,
                     textAlign = TextAlign.Center,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -145,14 +146,14 @@ fun OnboardingScreen(navController: NavController) {
                 }
             },
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF8EAFB)),
+            colors = ButtonDefaults.buttonColors(containerColor = AppColor.Main_Secondary1),
             modifier = Modifier
                 .padding(horizontal = 32.dp)
                 .fillMaxWidth()
         ) {
             Text(
                 text = "Create an account",
-                color = Color.Black,
+                color = AppColor.Main_Primary,
                 fontSize = 16.sp
             )
         }
@@ -164,8 +165,8 @@ fun OnboardingScreen(navController: NavController) {
             onClick = { navController.navigate("login") }
         ) {
             Row {
-                Text(text = "Already have an account? ", color = Color.Gray)
-                Text(text = "Sign In", color = Color.Magenta)
+                Text(text = "Already have an account? ", color = AppColor.Text_Black)
+                Text(text = "Sign In", color = AppColor.Text_Pink)
             }
         }
 
