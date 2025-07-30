@@ -13,6 +13,8 @@ import com.example.dating.ui.auth.VerifyCodeScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
+import com.example.dating.ui.profile.ProfileScreen
+import com.example.dating.ui.profile.SearchFriendScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
