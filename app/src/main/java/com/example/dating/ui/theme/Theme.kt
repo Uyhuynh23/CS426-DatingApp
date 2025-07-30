@@ -27,7 +27,7 @@ private val DarkColorScheme = lightColorScheme(
     surface = Main_Secondary1,
     onPrimary = Text_White,
     onSecondary = Text_Black,
-    onBackground = Text_Black,
+    onBackground = Text_LightBlack,
     onSurface = Text_Black,
 )
 
@@ -38,7 +38,7 @@ private val LightColorScheme = lightColorScheme(
     surface = Main_Secondary1,
     onPrimary = Text_White,
     onSecondary = Text_Black,
-    onBackground = Text_Black,
+    onBackground = Text_LightBlack,
     onSurface = Text_Black,
 )
 
