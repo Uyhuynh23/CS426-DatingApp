@@ -1,2 +1,8 @@
-package com.example.dating.naviagtion
+package com.example.dating.navigation
 
+sealed class Screen(val route: String) {
+    object Onboarding : Screen("onboarding")
+    object Login : Screen("login")
+    object Register : Screen("register")
+    object Home : Screen("home") // để test sau
+}
