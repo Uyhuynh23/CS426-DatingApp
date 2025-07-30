@@ -10,6 +10,15 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
+
+
+object GradientColor {
+    val gradient: Brush = GradientBackground
+    val circleGradient: Brush = Circle_Gradient
+    val mainBackground: Brush = MainBackground
+    val mainBackground2: Brush = MainBackground2
+}
 
 private val DarkColorScheme = lightColorScheme(
     primary = Main_Primary,
