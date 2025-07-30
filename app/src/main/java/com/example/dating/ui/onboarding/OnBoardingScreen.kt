@@ -60,7 +60,7 @@ fun OnboardingScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.onPrimary),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -104,7 +104,7 @@ fun OnboardingScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = pages[page].description,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -126,24 +126,14 @@ fun OnboardingScreen(navController: NavController) {
                         .padding(4.dp)
                         .size(if (isSelected) 10.dp else 8.dp)
                         .clip(CircleShape)
-                        .background(if (isSelected) Color.Black else Color.LightGray)
+                        .background(if (isSelected) MaterialTheme.colorScheme.onSurface else Color.LightGray)
                 )
             }
         }
 
         // Button Create Account
         Button(
-            onClick = {
-                if (pagerState.currentPage == pageCount - 1) {
-                    // Ở trang cuối -> sang Register
-                    navController.navigate("register")
-                } else {
-                    coroutineScope.launch {
-                        val nextPage = (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
-                        pagerState.animateScrollToPage(nextPage)
-                    }
-                }
-            },
+            onClick = { navController.navigate("register") },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF8EAFB)),
             modifier = Modifier
@@ -152,7 +142,7 @@ fun OnboardingScreen(navController: NavController) {
         ) {
             Text(
                 text = "Create an account",
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp
             )
         }

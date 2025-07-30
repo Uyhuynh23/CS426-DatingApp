@@ -1,3 +1,4 @@
+
 package com.example.dating.navigation
 
 import androidx.compose.runtime.Composable
@@ -6,31 +7,63 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dating.ui.onboarding.OnboardingScreen
 import androidx.compose.material3.Text
+import com.example.dating.ui.auth.SignUpScreen
+import com.example.dating.ui.auth.PhoneNumberScreen
+import com.example.dating.ui.auth.VerifyCodeScreen
+import com.example.dating.ui.profile.GenderSelectionScreen
+import com.example.dating.ui.profile.InterestSelectionScreen
+import com.example.dating.ui.profile.EnableNotificationScreen
+import com.example.dating.ui.profile.ProfileScreen
+import com.example.dating.ui.profile.SearchFriendScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-<<<<<<< Updated upstream
-        startDestination = Screen.Onboarding.route
-=======
-        startDestination = Screen.Profile.route
+        startDestination = Screen.EnableNotification.route
 
->>>>>>> Stashed changes
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
             OnboardingScreen(navController = navController)
         }
 
+        composable(Screen.Register.route) {
+            SignUpScreen(navController)
+        }
+
+        composable(Screen.PhoneNumber.route) {
+            // Phone number screen can be implemented here
+            PhoneNumberScreen(navController)
+        }
+
+        composable(Screen.Profile.route) {
+            ProfileScreen(navController = navController)
+        }
+
+        composable(Screen.VerifyCode.route) {
+            VerifyCodeScreen(navController)
+        }
+
+        composable(Screen.GenderSelect.route) {
+            GenderSelectionScreen(navController)
+        }
+
+        composable(Screen.InterestSelect.route) {
+            // Interest selection screen can be implemented here
+            InterestSelectionScreen(navController)
+        }
+
+        composable(Screen.SearchFriend.route) {
+            SearchFriendScreen(navController)
+        }
+        composable(Screen.EnableNotification.route) {
+            // Enable notification screen can be implemented here
+            EnableNotificationScreen(navController)
+        }
         // Login
         composable(Screen.Login.route) {
             Text("Login Screen - Test only")
-        }
-
-        // Register
-        composable(Screen.Register.route) {
-            Text("Register Screen - Test only")
         }
 
         // Home
