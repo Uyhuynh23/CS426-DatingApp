@@ -3,8 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
-    id("com.google.dagger.hilt.android") version "2.51.1" apply false
-    id("kotlin-kapt")
+        id("com.google.dagger.hilt.android")
+        id("kotlin-kapt")
+
+
 }
 
 android {
@@ -49,12 +51,14 @@ dependencies {
     implementation ("com.googlecode.libphonenumber:libphonenumber:8.13.22")
     // Hilt core
     implementation("com.google.dagger:hilt-android:2.51.1")
+    implementation(libs.androidx.constraintlayout)
     kapt("com.google.dagger:hilt-compiler:2.51.1")
 
     // Hilt ViewModel cho Compose
-    implementation("androidx.hilt:hilt-lifecycle-viewmodel:1.0.0-alpha03")
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    kapt("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

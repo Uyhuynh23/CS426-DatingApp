@@ -1,5 +1,7 @@
 package com.example.dating.di
 
+import com.example.dating.data.model.repository.AuthRepository
+import com.example.dating.data.model.repository.AuthRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
@@ -11,12 +13,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
     @Provides
-    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
     fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 
     @Provides
-    @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
-}
+    fun providesAuthRepository(impl: AuthRepositoryImpl): AuthRepository = impl
 
+}
