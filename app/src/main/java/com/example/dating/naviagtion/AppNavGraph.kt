@@ -6,6 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dating.ui.onboarding.OnboardingScreen
 import androidx.compose.material3.Text
+import com.example.dating.ui.auth.SignUpScreen
+import com.example.dating.ui.auth.PhoneNumberScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -18,14 +20,17 @@ fun AppNavGraph(navController: NavHostController) {
             OnboardingScreen(navController = navController)
         }
 
+        composable(Screen.Register.route) {
+            SignUpScreen(navController)
+        }
+
+        composable(Screen.PhoneNumber.route) {
+            // Phone number screen can be implemented here
+            PhoneNumberScreen(navController)
+        }
         // Login
         composable(Screen.Login.route) {
             Text("Login Screen - Test only")
-        }
-
-        // Register
-        composable(Screen.Register.route) {
-            Text("Register Screen - Test only")
         }
 
         // Home
