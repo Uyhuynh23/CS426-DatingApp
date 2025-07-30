@@ -133,17 +133,7 @@ fun OnboardingScreen(navController: NavController) {
 
         // Button Create Account
         Button(
-            onClick = {
-                if (pagerState.currentPage == pageCount - 1) {
-                    // Ở trang cuối -> sang Register
-                    navController.navigate("register")
-                } else {
-                    coroutineScope.launch {
-                        val nextPage = (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
-                        pagerState.animateScrollToPage(nextPage)
-                    }
-                }
-            },
+            onClick = { navController.navigate("register") },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF8EAFB)),
             modifier = Modifier
