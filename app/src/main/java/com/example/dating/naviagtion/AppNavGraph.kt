@@ -8,6 +8,7 @@ import com.example.dating.ui.onboarding.OnboardingScreen
 import androidx.compose.material3.Text
 import com.example.dating.ui.auth.SignUpScreen
 import com.example.dating.ui.auth.PhoneNumberScreen
+import com.example.dating.ui.auth.VerifyCodeScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -27,6 +28,10 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Screen.PhoneNumber.route) {
             // Phone number screen can be implemented here
             PhoneNumberScreen(navController)
+        }
+
+        composable(Screen.VerifyCode.route) {
+            VerifyCodeScreen(navController)
         }
         // Login
         composable(Screen.Login.route) {

@@ -138,7 +138,7 @@ fun PhoneNumberScreen(navController: NavController) {
         // Continue button
         Button(
             onClick = {
-                navController.navigate("verify") // Chuyển sang tab khác
+                navController.navigate("verify_code") // Chuyển sang tab khác
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             modifier = Modifier
