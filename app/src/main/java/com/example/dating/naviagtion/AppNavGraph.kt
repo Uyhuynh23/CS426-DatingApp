@@ -11,7 +11,12 @@ import androidx.compose.material3.Text
 fun AppNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
+<<<<<<< Updated upstream
         startDestination = Screen.Onboarding.route
+=======
+        startDestination = Screen.Profile.route
+
+>>>>>>> Stashed changes
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
