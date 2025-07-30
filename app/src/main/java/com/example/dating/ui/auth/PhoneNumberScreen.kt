@@ -31,7 +31,6 @@ import com.google.i18n.phonenumbers.NumberParseException
 @Composable
 fun PhoneNumberScreen(
     navController: NavController,
-    viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -50,15 +49,14 @@ fun PhoneNumberScreen(
         }
     }
 
-
-    // Observe verificationId to trigger navigation
-    val verificationId by viewModel.verificationId.collectAsState()
-
-    LaunchedEffect(verificationId) {
-        if (verificationId != null) {
-            navController.navigate("verify_code")
-        }
-    }
+//    // Observe verificationId to trigger navigation
+//    val verificationId by viewModel.verificationId.collectAsState()
+//
+//    LaunchedEffect(verificationId) {
+//        if (verificationId != null) {
+//            navController.navigate("verify_code")
+//        }
+//    }
 
 
     Column(
@@ -98,7 +96,7 @@ fun PhoneNumberScreen(
                         }
                     }
                 },
-                modifier = Modifier.width(100.dp)
+                modifier = Modifier.width(140.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
@@ -121,8 +119,7 @@ fun PhoneNumberScreen(
         Button(
             onClick = {
                 val fullNumber = countryCode + phoneNumber
-                viewModel.sendOtp(fullNumber,activity)
-
+                //viewModel.sendOtp(fullNumber,activity)
             },
             enabled = isPhoneValid,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),

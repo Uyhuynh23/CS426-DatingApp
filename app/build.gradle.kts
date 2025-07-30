@@ -46,6 +46,7 @@ dependencies {
     //Country Code Picker
     implementation ("com.hbb20:ccp:2.6.0")
 
+    implementation ("com.googlecode.libphonenumber:libphonenumber:8.13.22")
     // Hilt core
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")
