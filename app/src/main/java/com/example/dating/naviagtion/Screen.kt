@@ -10,5 +10,7 @@ sealed class Screen(val route: String) {
     object InterestSelect : Screen("interest_select")
     object SearchFriend : Screen("search_friend")
     object EnableNotification: Screen("enable_notification") // để test sau
+
+    object Profile : Screen("profile")
     object Home : Screen("home") // để test sau
 }

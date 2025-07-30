@@ -1,0 +1,248 @@
+// ui/profile/ProfileDetailsScreen.kt
+package com.example.dating.ui.profile
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.dating.ui.components.CustomCalendarDialog
+import java.text.SimpleDateFormat
+import java.util.*
+
+@Composable
+fun ProfileScreen(navController: NavController) {
+    var firstName by remember { mutableStateOf("David") }
+    var lastName by remember { mutableStateOf("Peterson") }
+    var birthday by remember { mutableStateOf<Date?>(null) }
+    var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showCalendar by remember { mutableStateOf(false) }
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        selectedImageUri = uri
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Header with Skip button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Profile details",
+                color = Color.Gray,
+                fontSize = 16.sp
+            )
+
+            TextButton(
+                onClick = { navController.navigate("home") }
+            ) {
+                Text(
+                    text = "Skip",
+                    color = Color(0xFFE91E63),
+                    fontSize = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Title
+        Text(
+            text = "Profile details",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // Avatar Section với Icons.Person
+        Box(
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            // Main avatar circle
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE0E0E0))
+                    .clickable { imagePickerLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (selectedImageUri != null) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "Profile Image",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Default avatar - sử dụng Icons.Default.Person
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Default Avatar",
+                        modifier = Modifier.size(60.dp),
+                        tint = Color.Gray
+                    )
+                }
+            }
+
+            // Camera icon for editing
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE91E63))
+                    .clickable { imagePickerLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Change Photo",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // First Name Field
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = { firstName = it },
+            label = { Text("First name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFFE91E63),
+                unfocusedBorderColor = Color.LightGray
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Last Name Field
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = { lastName = it },
+            label = { Text("Last name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFFE91E63),
+                unfocusedBorderColor = Color.LightGray
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Birthday Button
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showCalendar = true },
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8E8F5))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = "Calendar",
+                    tint = Color(0xFFE91E63),
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = birthday?.let {
+                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
+                    } ?: "Choose birthday date",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFE91E63)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Confirm Button
+        Button(
+            onClick = {
+                // TODO: Save profile data
+                navController.navigate("home")
+            },
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && birthday != null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFE91E63),
+                disabledContainerColor = Color.LightGray
+            )
+        ) {
+            Text(
+                text = "Confirm",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    // Custom Calendar Dialog
+    if (showCalendar) {
+        CustomCalendarDialog(
+            onDateSelected = { selectedDate ->
+                birthday = selectedDate
+                showCalendar = false
+            },
+            onDismiss = { showCalendar = false }
+        )
+    }
+}

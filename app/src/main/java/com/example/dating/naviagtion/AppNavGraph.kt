@@ -1,3 +1,4 @@
+
 package com.example.dating.navigation
 
 import androidx.compose.runtime.Composable
@@ -11,7 +12,6 @@ import com.example.dating.ui.auth.PhoneNumberScreen
 import com.example.dating.ui.auth.VerifyCodeScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
-import com.example.dating.ui.profile.SearchFriendScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
 
 @Composable
@@ -19,6 +19,7 @@ fun AppNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
         startDestination = Screen.EnableNotification.route
+
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -32,6 +33,10 @@ fun AppNavGraph(navController: NavHostController) {
         composable(Screen.PhoneNumber.route) {
             // Phone number screen can be implemented here
             PhoneNumberScreen(navController)
+        }
+
+        composable(Screen.Profile.route) {
+            ProfileScreen(navController = navController)
         }
 
         composable(Screen.VerifyCode.route) {
