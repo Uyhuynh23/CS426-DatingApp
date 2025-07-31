@@ -1,7 +1,7 @@
 package com.example.dating.ui.components
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,29 +19,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.dating.ui.theme.AppColors
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun CustomCalendarDialog(
     onDateSelected: (Date) -> Unit,
     onDismiss: () -> Unit
 ) {
     var currentDate by remember { mutableStateOf(Calendar.getInstance()) }
+    var visibleMonth by remember { mutableStateOf(currentDate.timeInMillis) }
     var selectedDate by remember { mutableStateOf<Int?>(null) }
     var showYearPicker by remember { mutableStateOf(false) }
     var showMonthPicker by remember { mutableStateOf(false) }
-
-    // Animation states
-    var isAnimating by remember { mutableStateOf(false) }
     var animationDirection by remember { mutableStateOf(0) }
 
     Dialog(
@@ -55,88 +53,63 @@ fun CustomCalendarDialog(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
-            ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+
                 // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Calendar",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-
+                    Text("Calendar", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     TextButton(onClick = onDismiss) {
-                        Text(
-                            text = "Skip",
-                            color = Color.Red,
-                            fontSize = 16.sp
-                        )
+                        Text("Skip", color = AppColors.Text_Pink, fontSize = 16.sp)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // Birthday label
                 Text(
-                    text = "Birthday",
+                    "Birthday",
                     fontSize = 16.sp,
                     color = Color.Gray,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // Year and Month navigation - FIXED VERSION
+                // Year & Month with arrows
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Arrow
-                    IconButton(
-                        onClick = {
-                            if (!isAnimating) {
-                                animationDirection = -1
-                                isAnimating = true
-                            }
-                        },
-                        enabled = !isAnimating
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "Previous Month",
-                            tint = if (isAnimating) Color.Gray else Color.Black
-                        )
+                    IconButton(onClick = {
+                        animationDirection = -1
+                        currentDate.add(Calendar.MONTH, -1)
+                        currentDate = currentDate.clone() as Calendar
+                        visibleMonth = currentDate.timeInMillis
+                        selectedDate = null
+                    }) {
+                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null)
                     }
 
-                    // Year and Month Display - Update ngay lập tức
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Clickable Year
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "${currentDate.get(Calendar.YEAR)}",
+                            "${currentDate.get(Calendar.YEAR)}",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFE91E63),
+                            color = AppColors.Text_Pink,
                             modifier = Modifier.clickable {
                                 showYearPicker = !showYearPicker
                                 showMonthPicker = false
                             }
                         )
-
-                        // Clickable Month
                         Text(
-                            text = SimpleDateFormat("MMMM", Locale.getDefault()).format(currentDate.time),
+                            SimpleDateFormat("MMMM", Locale.getDefault()).format(currentDate.time),
                             fontSize = 16.sp,
-                            color = Color(0xFFE91E63),
+                            color = AppColors.Text_Pink,
                             modifier = Modifier.clickable {
                                 showMonthPicker = !showMonthPicker
                                 showYearPicker = false
@@ -144,83 +117,67 @@ fun CustomCalendarDialog(
                         )
                     }
 
-                    // Right Arrow
-                    IconButton(
-                        onClick = {
-                            if (!isAnimating) {
-                                animationDirection = 1
-                                isAnimating = true
-                            }
-                        },
-                        enabled = !isAnimating
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowRight,
-                            contentDescription = "Next Month",
-                            tint = if (isAnimating) Color.Gray else Color.Black
-                        )
+                    IconButton(onClick = {
+                        animationDirection = 1
+                        currentDate.add(Calendar.MONTH, 1)
+                        currentDate = currentDate.clone() as Calendar
+                        visibleMonth = currentDate.timeInMillis
+                        selectedDate = null
+                    }) {
+                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // Content with animation
-                Box(
-                    modifier = Modifier.height(200.dp)
-                ) {
+                // Content
+                Box(Modifier.height(260.dp)) {
                     when {
-                        showYearPicker -> {
-                            YearPicker(
-                                currentYear = currentDate.get(Calendar.YEAR),
-                                onYearSelected = { year ->
-                                    currentDate.set(Calendar.YEAR, year)
-                                    // Force recomposition by cloning
-                                    currentDate = currentDate.clone() as Calendar
-                                    showYearPicker = false
-                                    selectedDate = null
+                        showYearPicker -> YearPicker(
+                            currentYear = currentDate.get(Calendar.YEAR),
+                            onYearSelected = { year ->
+                                currentDate.set(Calendar.YEAR, year)
+                                currentDate = currentDate.clone() as Calendar
+                                visibleMonth = currentDate.timeInMillis
+                                showYearPicker = false
+                                selectedDate = null
+                            }
+                        )
+                        showMonthPicker -> MonthPicker(
+                            currentMonth = currentDate.get(Calendar.MONTH),
+                            onMonthSelected = { month ->
+                                currentDate.set(Calendar.MONTH, month)
+                                currentDate = currentDate.clone() as Calendar
+                                visibleMonth = currentDate.timeInMillis
+                                showMonthPicker = false
+                                selectedDate = null
+                            }
+                        )
+                        else -> AnimatedContent(
+                            targetState = visibleMonth,
+                            transitionSpec = {
+                                if (animationDirection >= 0) {
+                                    slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }) + fadeIn() with
+                                            fadeOut(animationSpec = tween(150))
+                                } else {
+                                    slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }) + fadeIn() with
+                                            fadeOut(animationSpec = tween(150))
                                 }
-                            )
-                        }
-                        showMonthPicker -> {
-                            MonthPicker(
-                                currentMonth = currentDate.get(Calendar.MONTH),
-                                onMonthSelected = { month ->
-                                    currentDate.set(Calendar.MONTH, month)
-                                    // Force recomposition by cloning
-                                    currentDate = currentDate.clone() as Calendar
-                                    showMonthPicker = false
-                                    selectedDate = null
-                                }
-                            )
-                        }
-                        else -> {
-                            AnimatedCalendarGrid(
-                                currentDate = currentDate,
+                            },
+                            label = "CalendarSlide"
+                        ) { targetTime ->
+                            val monthCalendar = Calendar.getInstance().apply { timeInMillis = targetTime }
+                            CalendarGrid(
+                                currentDate = monthCalendar,
                                 selectedDate = selectedDate,
-                                isAnimating = isAnimating,
-                                animationDirection = animationDirection,
-                                onDateSelected = { day ->
-                                    selectedDate = day
-                                },
-                                onAnimationComplete = {
-                                    // Update the date after animation
-                                    if (animationDirection == -1) {
-                                        currentDate.add(Calendar.MONTH, -1)
-                                    } else {
-                                        currentDate.add(Calendar.MONTH, 1)
-                                    }
-                                    currentDate = currentDate.clone() as Calendar
-                                    selectedDate = null
-                                    isAnimating = false
-                                }
+                                onDateSelected = { selectedDate = it }
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-                // Save Button
                 Button(
                     onClick = {
                         selectedDate?.let { day ->
@@ -229,90 +186,18 @@ fun CustomCalendarDialog(
                             onDateSelected(calendar.time)
                         }
                     },
-                    enabled = selectedDate != null && !showYearPicker && !showMonthPicker && !isAnimating,
+                    enabled = selectedDate != null && !showYearPicker && !showMonthPicker,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE91E63),
+                        containerColor = AppColors.Main_Secondary1,
                         disabledContainerColor = Color.LightGray
                     )
                 ) {
-                    Text(
-                        text = "Save",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Save", color = AppColors.Main_Primary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
-            }
-        }
-    }
-}
-
-// Các component khác giữ nguyên...
-@Composable
-fun AnimatedCalendarGrid(
-    currentDate: Calendar,
-    selectedDate: Int?,
-    isAnimating: Boolean,
-    animationDirection: Int,
-    onDateSelected: (Int) -> Unit,
-    onAnimationComplete: () -> Unit
-) {
-    val density = LocalDensity.current
-    val screenWidth = with(density) { 300.dp.toPx() }.toInt()
-
-    val offsetX by animateIntAsState(
-        targetValue = if (isAnimating) screenWidth * -animationDirection else 0,
-        animationSpec = tween(
-            durationMillis = 300,
-            easing = FastOutSlowInEasing
-        ),
-        finishedListener = {
-            if (isAnimating && it != 0) {
-                onAnimationComplete()
-            }
-        },
-        label = "CalendarSlideAnimation"
-    )
-
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset { IntOffset(offsetX, 0) }
-        ) {
-            CalendarGrid(
-                currentDate = currentDate,
-                selectedDate = selectedDate,
-                onDateSelected = onDateSelected,
-                enabled = !isAnimating
-            )
-        }
-
-        if (isAnimating) {
-            val previewDate = currentDate.clone() as Calendar
-            if (animationDirection == 1) {
-                previewDate.add(Calendar.MONTH, 1)
-            } else {
-                previewDate.add(Calendar.MONTH, -1)
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset { IntOffset(offsetX + screenWidth * animationDirection, 0) }
-            ) {
-                CalendarGrid(
-                    currentDate = previewDate,
-                    selectedDate = null,
-                    onDateSelected = { },
-                    enabled = false
-                )
             }
         }
     }
@@ -322,73 +207,66 @@ fun AnimatedCalendarGrid(
 fun CalendarGrid(
     currentDate: Calendar,
     selectedDate: Int?,
-    onDateSelected: (Int) -> Unit,
-    enabled: Boolean = true
+    onDateSelected: (Int) -> Unit
 ) {
     val calendar = currentDate.clone() as Calendar
     calendar.set(Calendar.DAY_OF_MONTH, 1)
     val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
 
+    // Luôn 42 ô để mượt
+    val totalCells = 42
+    val days = (0 until totalCells).map { index ->
+        val dayNumber = index - firstDayOfWeek + 1
+        if (dayNumber in 1..daysInMonth) dayNumber else null
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxSize(),
-        userScrollEnabled = enabled
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(264.dp),
+        userScrollEnabled = false
     ) {
-        items(firstDayOfWeek) {
-            Box(modifier = Modifier.size(40.dp))
-        }
-
-        items((1..daysInMonth).toList()) { day ->
-            CalendarDay(
-                day = day,
-                isSelected = day == selectedDate,
-                enabled = enabled,
-                onClick = { if (enabled) onDateSelected(day) }
-            )
+        items(days.size) { index ->
+            val day = days[index]
+            if (day == null) {
+                Box(modifier = Modifier.size(40.dp))
+            } else {
+                CalendarDay(
+                    day = day,
+                    isSelected = day == selectedDate,
+                    onClick = { onDateSelected(day) }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun CalendarDay(
-    day: Int,
-    isSelected: Boolean,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
+fun CalendarDay(day: Int, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(
-                if (isSelected) Color(0xFFE91E63) else Color.Transparent
-            )
-            .clickable(enabled = enabled) { onClick() },
+            .background(if (isSelected) AppColors.Main_Secondary1 else Color.Transparent)
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = day.toString(),
             fontSize = 16.sp,
-            color = when {
-                isSelected -> Color.White
-                enabled -> Color.Black
-                else -> Color.Gray
-            },
+            color = if (isSelected) AppColors.Main_Primary else Color.Black,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
 
 @Composable
-fun YearPicker(
-    currentYear: Int,
-    onYearSelected: (Int) -> Unit
-) {
+fun YearPicker(currentYear: Int, onYearSelected: (Int) -> Unit) {
     val years = (1950..2010).toList()
-
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -400,16 +278,14 @@ fun YearPicker(
                 modifier = Modifier
                     .height(40.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (year == currentYear) Color(0xFFE91E63) else Color(0xFFF5F5F5)
-                    )
+                    .background(if (year == currentYear) AppColors.Main_Secondary1 else Color(0xFFF5F5F5))
                     .clickable { onYearSelected(year) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = year.toString(),
                     fontSize = 14.sp,
-                    color = if (year == currentYear) Color.White else Color.Black,
+                    color = if (year == currentYear) AppColors.Main_Primary else Color.Black,
                     fontWeight = if (year == currentYear) FontWeight.Bold else FontWeight.Normal
                 )
             }
@@ -418,15 +294,11 @@ fun YearPicker(
 }
 
 @Composable
-fun MonthPicker(
-    currentMonth: Int,
-    onMonthSelected: (Int) -> Unit
-) {
+fun MonthPicker(currentMonth: Int, onMonthSelected: (Int) -> Unit) {
     val months = listOf(
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     )
-
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -438,16 +310,14 @@ fun MonthPicker(
                 modifier = Modifier
                     .height(40.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (index == currentMonth) Color(0xFFE91E63) else Color(0xFFF5F5F5)
-                    )
+                    .background(if (index == currentMonth) AppColors.Main_Secondary1 else Color(0xFFF5F5F5))
                     .clickable { onMonthSelected(index) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = months[index].take(3),
                     fontSize = 14.sp,
-                    color = if (index == currentMonth) Color.White else Color.Black,
+                    color = if (index == currentMonth) AppColors.Main_Primary else Color.Black,
                     fontWeight = if (index == currentMonth) FontWeight.Bold else FontWeight.Normal
                 )
             }
