@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Person
@@ -27,6 +28,9 @@ import coil.compose.AsyncImage
 import com.example.dating.ui.components.CustomCalendarDialog
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.dating.ui.theme.AppColors
+import com.example.dating.R
+import androidx.compose.ui.res.painterResource
 
 @Composable
 fun ProfileScreen(navController: NavController) {
@@ -53,27 +57,32 @@ fun ProfileScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         // Header with Skip button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Profile details",
-                color = Color.Gray,
-                fontSize = 16.sp
-            )
-
-            TextButton(
-                onClick = { navController.navigate("home") }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Back
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .clickable { navController.popBackStack() }
+                    .align(Alignment.CenterStart),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Skip",
-                    color = Color(0xFFE91E63),
-                    fontSize = 16.sp
-                )
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink,)
             }
+
+            // Skip
+            Text(
+                text = "Skip",
+                color = AppColors.Text_Pink,
+                fontSize = 16.sp,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .clickable { navController.navigate("gender_select") }
+            )
         }
+
+
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -82,7 +91,7 @@ fun ProfileScreen(navController: NavController) {
             text = "Profile details",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = AppColors.Text_LightBlack
         )
 
         Spacer(modifier = Modifier.height(48.dp))
@@ -125,14 +134,14 @@ fun ProfileScreen(navController: NavController) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE91E63))
+                    .background(AppColors.Main_Secondary1)
                     .clickable { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
                     contentDescription = "Change Photo",
-                    tint = Color.White,
+                    tint = AppColors.Main_Primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -149,7 +158,7 @@ fun ProfileScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFFE91E63),
+                focusedBorderColor = AppColors.Text_Pink,
                 unfocusedBorderColor = Color.LightGray
             )
         )
@@ -165,7 +174,7 @@ fun ProfileScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFFE91E63),
+                focusedBorderColor = AppColors.Text_Pink,
                 unfocusedBorderColor = Color.LightGray
             )
         )
@@ -187,9 +196,8 @@ fun ProfileScreen(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.DateRange,
+                    painter = painterResource(id = R.drawable.ic_profile_calender),
                     contentDescription = "Calendar",
-                    tint = Color(0xFFE91E63),
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -201,7 +209,7 @@ fun ProfileScreen(navController: NavController) {
                     } ?: "Choose birthday date",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFFE91E63)
+                    color = AppColors.Main_Primary
                 )
             }
         }
@@ -212,7 +220,7 @@ fun ProfileScreen(navController: NavController) {
         Button(
             onClick = {
                 // TODO: Save profile data
-                navController.navigate("home")
+                navController.navigate("gender_select")
             },
             enabled = firstName.isNotBlank() && lastName.isNotBlank() && birthday != null,
             modifier = Modifier
@@ -220,13 +228,13 @@ fun ProfileScreen(navController: NavController) {
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFE91E63),
+                containerColor = AppColors.Main_Secondary1,
                 disabledContainerColor = Color.LightGray
             )
         ) {
             Text(
                 text = "Confirm",
-                color = Color.White,
+                color = AppColors.Main_Primary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )

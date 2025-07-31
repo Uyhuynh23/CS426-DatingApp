@@ -13,33 +13,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 
 
-object GradientColor {
-    val gradient: Brush = GradientBackground
-    val circleGradient: Brush = Circle_Gradient
-    val mainBackground: Brush = MainBackground
-    val mainBackground2: Brush = MainBackground2
-}
 
 private val DarkColorScheme = lightColorScheme(
-    primary = Main_Primary,
-    secondary = Main_Secondary1,
-    background = Main_PinkBackground,
-    surface = Main_Secondary1,
-    onPrimary = Text_White,
-    onSecondary = Text_Black,
-    onBackground = Text_LightBlack,
-    onSurface = Text_Black,
+    //#default
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Main_Primary,
-    secondary = Main_Secondary1,
-    background = Main_PinkBackground,
-    surface = Main_Secondary1,
-    onPrimary = Text_White,
-    onSecondary = Text_Black,
-    onBackground = Text_LightBlack,
-    onSurface = Text_Black,
+    //#default
 )
 
 

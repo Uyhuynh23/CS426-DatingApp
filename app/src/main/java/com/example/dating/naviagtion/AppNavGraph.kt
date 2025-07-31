@@ -23,7 +23,7 @@ import com.example.dating.viewmodel.AuthViewModel
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Onboarding.route
+        startDestination = Screen.Profile.route
 
     ) {
         // Onboarding

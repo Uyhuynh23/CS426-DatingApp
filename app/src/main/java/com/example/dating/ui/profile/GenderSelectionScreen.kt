@@ -55,7 +55,7 @@ fun GenderSelectionScreen(navController: NavController) {
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .clickable { navController.navigate("home") }
+                    .clickable { navController.navigate("interest_select") }
             )
         }
 
@@ -106,7 +106,7 @@ fun GenderSelectionScreen(navController: NavController) {
         Button(
             onClick = {
                 // TODO: Save gender và chuyển sang màn tiếp theo
-                navController.navigate("home")
+                navController.navigate("interest_select")
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),

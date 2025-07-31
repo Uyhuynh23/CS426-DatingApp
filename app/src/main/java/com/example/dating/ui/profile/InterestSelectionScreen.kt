@@ -79,7 +79,7 @@ fun InterestSelectionScreen(navController: NavController) {
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .clickable { navController.navigate("home") }
+                    .clickable { navController.navigate("search_friend") }
             )
         }
 
@@ -132,7 +132,7 @@ fun InterestSelectionScreen(navController: NavController) {
         Button(
             onClick = {
                 // TODO: save selectedInterests
-                navController.navigate("home")
+                navController.navigate("search_friend") // Navigate to the next screen
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),

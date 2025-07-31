@@ -40,7 +40,7 @@ fun SearchFriendScreen(navController: NavController) {
                     .align(Alignment.CenterEnd)
                     .clickable {
                         // TODO: điều hướng nếu skip
-                        navController.navigate("home")
+                        navController.navigate("enable_notification") // ví dụ điều hướng
                     }
             )
         }
@@ -80,7 +80,7 @@ fun SearchFriendScreen(navController: NavController) {
         Button(
             onClick = {
                 // TODO: request READ_CONTACTS permission hoặc navigate
-                navController.navigate("home")
+                navController.navigate("enable_notification") // ví dụ điều hướng
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),
