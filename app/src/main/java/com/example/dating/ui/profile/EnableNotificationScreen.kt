@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.R
+import com.example.dating.ui.theme.AppColors
 
 @Composable
 fun EnableNotificationScreen(navController: NavController) {
@@ -32,16 +35,27 @@ fun EnableNotificationScreen(navController: NavController) {
 
         // Skip button
         Box(modifier = Modifier.fillMaxWidth()) {
+            // Back
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .clickable { navController.popBackStack() }
+                    .align(Alignment.CenterStart),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink,)
+            }
+
+            // Skip
             Text(
                 text = "Skip",
-                color = Color(0xFFD44BDB),
+                color = AppColors.Text_Pink,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .clickable {
-                        // TODO: handle skip, tạm thời về home
-                        navController.navigate("home")
-                    }
+                    .clickable { navController.navigate("home") }
             )
         }
 
@@ -61,7 +75,7 @@ fun EnableNotificationScreen(navController: NavController) {
             text = "Enable notification’s",
             fontWeight = FontWeight.Bold,
             fontSize = 22.sp,
-            color = Color.Black,
+            color = AppColors.Text_Black,
             textAlign = TextAlign.Center
         )
 
@@ -70,7 +84,7 @@ fun EnableNotificationScreen(navController: NavController) {
         // Subtitle
         Text(
             text = "Get push-notification when you get the match\nor receive a message.",
-            color = Color.Gray,
+            color = AppColors.Text_LightBlack,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
@@ -91,7 +105,7 @@ fun EnableNotificationScreen(navController: NavController) {
         ) {
             Text(
                 text = "I want to be notified",
-                color = Color(0xFF2B0A2B),
+                color = AppColors.Main_Primary,
                 fontSize = 16.sp
             )
         }

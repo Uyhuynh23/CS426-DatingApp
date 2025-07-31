@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.R
+import com.example.dating.ui.theme.AppColors
 
 @Composable
 fun SearchFriendScreen(navController: NavController) {
@@ -32,16 +35,27 @@ fun SearchFriendScreen(navController: NavController) {
 
         // Skip button
         Box(modifier = Modifier.fillMaxWidth()) {
+            // Back
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .clickable { navController.popBackStack() }
+                    .align(Alignment.CenterStart),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink,)
+            }
+
+            // Skip
             Text(
                 text = "Skip",
-                color = Color(0xFFD44BDB),
+                color = AppColors.Text_Pink,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .clickable {
-                        // TODO: điều hướng nếu skip
-                        navController.navigate("enable_notification") // ví dụ điều hướng
-                    }
+                    .clickable { navController.navigate("enable_notification") }
             )
         }
 
@@ -61,7 +75,7 @@ fun SearchFriendScreen(navController: NavController) {
             text = "Search friend’s",
             fontWeight = FontWeight.Bold,
             fontSize = 22.sp,
-            color = Color.Black
+            color = AppColors.Text_Black
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -69,7 +83,7 @@ fun SearchFriendScreen(navController: NavController) {
         // Subtitle
         Text(
             text = "You can find friends from your contact lists\nto connected",
-            color = Color.Gray,
+            color = AppColors.Text_LightBlack,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
@@ -90,7 +104,7 @@ fun SearchFriendScreen(navController: NavController) {
         ) {
             Text(
                 text = "Access to a contact list",
-                color = Color(0xFF2B0A2B),
+                color = AppColors.Main_Primary,
                 fontSize = 16.sp
             )
         }
