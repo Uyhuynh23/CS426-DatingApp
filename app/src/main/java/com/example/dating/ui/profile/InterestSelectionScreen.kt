@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.R
+import com.example.dating.ui.theme.AppColors
+import androidx.compose.ui.text.style.TextAlign
 
 data class Interest(
     val name: String,
@@ -59,23 +61,23 @@ fun InterestSelectionScreen(navController: NavController) {
 
         // Header
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Back button
+            // Back
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF8F8F8))
+                    .background(Color.White)
                     .clickable { navController.popBackStack() }
                     .align(Alignment.CenterStart),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink,)
             }
 
             // Skip
             Text(
                 text = "Skip",
-                color = Color(0xFFD44BDB),
+                color = AppColors.Text_Pink,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -83,26 +85,32 @@ fun InterestSelectionScreen(navController: NavController) {
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Title
-        Text(
-            text = "Your interests",
-            fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
-            color = Color(0xFF2B0A2B),
-            modifier = Modifier.align(Alignment.Start)
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Your interests",
+                fontWeight = FontWeight.Bold,
+                fontSize = 26.sp,
+                color = AppColors.Text_Black,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // Subtitle
         Text(
             text = "Select a few of your interests and let everyone\nknow what you’re passionate about.",
-            color = Color.Gray,
+            color = AppColors.Text_LightBlack,
             fontSize = 14.sp,
-            modifier = Modifier.align(Alignment.Start)
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()              // chiếm hết chiều ngang
+                .align(Alignment.CenterHorizontally) // căn giữa trong Column
         )
+
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -157,7 +165,7 @@ fun InterestItem(interest: Interest, isSelected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .height(50.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isSelected) Color(0xFFD44BDB) else Color(0xFFF8F8F8))
+            .background(if (isSelected) AppColors.Text_Pink  else Color(0xFFF8F8F8))
             .clickable { onClick() }
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart
@@ -166,11 +174,11 @@ fun InterestItem(interest: Interest, isSelected: Boolean, onClick: () -> Unit) {
             Icon(
                 painter = painterResource(id = interest.icon),
                 contentDescription = interest.name,
-                tint = if (isSelected) Color.White else Color(0xFF2B0A2B)
+                tint = if (isSelected) AppColors.Main_Primary else AppColors.Main_Primary
             )
             Text(
                 text = interest.name,
-                color = if (isSelected) Color.White else Color(0xFF2B0A2B),
+                color = if (isSelected) Color.White else AppColors.Main_Primary,
                 fontSize = 14.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
