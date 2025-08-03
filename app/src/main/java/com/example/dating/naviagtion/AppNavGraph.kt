@@ -12,6 +12,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.ui.auth.SignUpScreen
 import com.example.dating.ui.auth.PhoneNumberScreen
 import com.example.dating.ui.auth.VerifyCodeScreen
+import com.example.dating.ui.auth.VerifyEmailScreen
+import com.example.dating.ui.auth.EmailScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
@@ -42,6 +44,13 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
 
         composable(Screen.Profile.route) {
             ProfileScreen(navController = navController)
+        }
+
+        composable(Screen.EmailScreen.route) {
+            EmailScreen(navController = navController)
+        }
+        composable(Screen.VerifyEmail.route) {
+            VerifyEmailScreen(navController = navController)
         }
 
         composable(Screen.VerifyCode.route) {
