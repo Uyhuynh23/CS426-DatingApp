@@ -1,5 +1,11 @@
 package com.example.dating.ui.auth
 
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,18 +16,46 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import com.example.dating.R
-import androidx.compose.ui.layout.ContentScale
 import com.example.dating.ui.theme.AppColors
-
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import kotlinx.coroutines.launch
 
 @Composable
 fun SignUpScreen(navController: NavController) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Google Sign-In configuration
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            Log.d("GoogleSignIn", "Sign in successful!")
+            Log.d("GoogleSignIn", "User name: ${account.displayName}")
+            Log.d("GoogleSignIn", "User email: ${account.email}")
+
+            // Navigate to Home screen after successful sign in
+            navController.navigate("home") {
+                popUpTo("register") { inclusive = true }
+            }
+        } catch (e: ApiException) {
+            Log.e("GoogleSignIn", "Sign in failed with code: ${e.statusCode}")
+            Log.e("GoogleSignIn", "Error message: ${e.message}")
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,20 +125,20 @@ fun SignUpScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Social Login Row - Sửa horizontalArrangement
+        // Social Login Row
         Row(
             horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
             modifier = Modifier.fillMaxWidth()
         ) {
             SocialSquareButton(
-                iconRes = R.drawable.ic_facebook, // icon vuông như mẫu của bạn
+                iconRes = R.drawable.ic_facebook,
                 contentDescription = "Facebook",
-                onClick = { /* ... */ }
+                onClick = { /* Facebook sign in */ }
             )
             SocialSquareButton(
-                iconRes = R.drawable.ic_google, // icon vuông như mẫu của bạn
+                iconRes = R.drawable.ic_google,
                 contentDescription = "Google",
-                onClick = { /* ... */ }
+                onClick = { signInWithGoogle(context, googleSignInLauncher) }
             )
         }
 
@@ -138,7 +172,7 @@ fun SocialSquareButton(
     contentDescription: String,
     onClick: () -> Unit,
     backgroundColor: Color = Color.White,
-    borderColor: Color = Color(0xFFE0E0E0), // xám nhạt
+    borderColor: Color = Color(0xFFE0E0E0),
     cornerRadius: Dp = 16.dp
 ) {
     Box(
@@ -156,5 +190,25 @@ fun SocialSquareButton(
             modifier = Modifier.size(32.dp),
             contentScale = ContentScale.Fit
         )
+    }
+}
+
+// Helper function for Google Sign-In
+private fun signInWithGoogle(
+    context: Context,
+    launcher: ActivityResultLauncher<Intent>
+) {
+    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        .requestEmail()
+        .requestProfile()
+        .requestIdToken("224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com")
+        .build()
+
+    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+
+    // Sign out first to ensure account picker shows
+    googleSignInClient.signOut().addOnCompleteListener {
+        val signInIntent = googleSignInClient.signInIntent
+        launcher.launch(signInIntent)
     }
 }
