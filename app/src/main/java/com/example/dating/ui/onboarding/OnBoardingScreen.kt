@@ -53,9 +53,13 @@ fun OnboardingScreen(navController: NavController) {
         )
     )
 
-    val pageCount = pages.size
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { pageCount })
-    val coroutineScope = rememberCoroutineScope()
+    val actualPageCount = pages.size
+    val virtualPageCount = Int.MAX_VALUE
+    val startPage = virtualPageCount / 2
+    val pagerState = rememberPagerState(
+        initialPage = startPage,
+        pageCount = { virtualPageCount }
+    )
 
     Column(
         modifier = Modifier
@@ -66,18 +70,30 @@ fun OnboardingScreen(navController: NavController) {
     ) {
         Spacer(modifier = Modifier.height(40.dp))
 
-        // HorizontalPager với hiệu ứng carousel
+        // HorizontalPager với hiệu ứng carousel và preview
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 50.dp), // để lộ trang bên
-            pageSpacing = 20.dp
-        ) { page ->
-            val pageOffset =
-                (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-            val scale = 0.85f + (1 - pageOffset.absoluteValue.coerceIn(0f, 1f)) * 0.15f
+            contentPadding = PaddingValues(horizontal = 80.dp), // Tăng padding để hiển thị preview
+            pageSpacing = 16.dp
+        ) { virtualPage ->
+            val actualPage = ((virtualPage - startPage) % actualPageCount + actualPageCount) % actualPageCount
+            val pageOffset = (pagerState.currentPage - virtualPage) + pagerState.currentPageOffsetFraction
+
+            // Tính toán scale và alpha dựa trên vị trí
+            val scale = when {
+                pageOffset.absoluteValue < 0.1f -> 1f // Trang chính giữa
+                pageOffset.absoluteValue < 1.1f -> 0.7f // Trang bên cạnh
+                else -> 0.5f // Trang xa hơn
+            }
+
+            val alpha = when {
+                pageOffset.absoluteValue < 0.1f -> 1f // Trang chính giữa
+                pageOffset.absoluteValue < 1.1f -> 0.6f // Trang bên cạnh
+                else -> 0.3f // Trang xa hơn
+            }
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -85,30 +101,35 @@ fun OnboardingScreen(navController: NavController) {
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
+                        this.alpha = alpha
                     }
             ) {
                 Image(
-                    painter = painterResource(id = pages[page].image),
-                    contentDescription = pages[page].title,
+                    painter = painterResource(id = pages[actualPage].image),
+                    contentDescription = pages[actualPage].title,
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .fillMaxWidth()
                         .aspectRatio(0.7f)
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = pages[page].title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = pages[page].description,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
+
+                // Chỉ hiển thị text cho trang chính giữa
+                if (pageOffset.absoluteValue < 0.1f) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = pages[actualPage].title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = pages[actualPage].description,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
             }
         }
 
@@ -119,8 +140,9 @@ fun OnboardingScreen(navController: NavController) {
                 .padding(vertical = 16.dp)
                 .fillMaxWidth()
         ) {
-            repeat(pageCount) { index ->
-                val isSelected = pagerState.currentPage == index
+            repeat(actualPageCount) { index ->
+                val currentActualPage = ((pagerState.currentPage - startPage) % actualPageCount + actualPageCount) % actualPageCount
+                val isSelected = currentActualPage == index
                 Box(
                     modifier = Modifier
                         .padding(4.dp)
