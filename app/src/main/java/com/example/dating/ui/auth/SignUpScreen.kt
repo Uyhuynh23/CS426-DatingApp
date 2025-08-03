@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.*
 import androidx.navigation.NavController
 import com.example.dating.R
 import androidx.compose.ui.layout.ContentScale
+import com.example.dating.ui.theme.AppColors
 
 
 @Composable
@@ -54,8 +55,8 @@ fun SignUpScreen(navController: NavController) {
         Button(
             onClick = { navController.navigate("login") },
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFAC66DA),
-                contentColor = Color.White
+                containerColor = AppColors.Main_Secondary1,
+                contentColor = AppColors.Main_Primary
             ),
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
@@ -77,15 +78,15 @@ fun SignUpScreen(navController: NavController) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Divider(Modifier.weight(1f), color = Color(0xFFE9D6F7), thickness = 1.dp)
+            Divider(Modifier.weight(1f), color = AppColors.Text_LightBlack, thickness = 0.5.dp)
             Text(
                 "  or sign up with  ",
-                color = Color(0xFFAC66DA),
+                color = AppColors.Main_Primary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
-            Divider(Modifier.weight(1f), color = Color(0xFFE9D6F7), thickness = 1.dp)
+            Divider(Modifier.weight(1f), color = AppColors.Text_LightBlack, thickness = 0.5.dp)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -117,13 +118,13 @@ fun SignUpScreen(navController: NavController) {
         ) {
             Text(
                 text = "Terms of use",
-                color = Color(0xFFAC66DA),
+                color = AppColors.Main_Primary,
                 fontSize = 14.sp,
                 modifier = Modifier.clickable { /* open terms link */ }
             )
             Text(
                 text = "Privacy Policy",
-                color = Color(0xFFAC66DA),
+                color = AppColors.Main_Primary,
                 fontSize = 14.sp,
                 modifier = Modifier.clickable { /* open policy link */ }
             )
