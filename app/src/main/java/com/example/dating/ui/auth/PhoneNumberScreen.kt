@@ -1,81 +1,82 @@
 package com.example.dating.ui.auth
 
-import androidx.compose.foundation.Image
+
+import android.annotation.SuppressLint
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.dating.R
+import com.hbb20.CountryCodePicker
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.hilt.navigation.compose.hiltViewModel
 
-data class CountryCode(
-    val flagRes: Int,
-    val code: String,
-    val name: String
-)
+import com.google.i18n.phonenumbers.PhoneNumberUtil
+import com.google.i18n.phonenumbers.NumberParseException
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
-fun PhoneNumberScreen(navController: NavController) {
+fun PhoneNumberScreen(
+    navController: NavController,
+) {
+    val context = LocalContext.current
+    val activity = context as Activity
+
     var phoneNumber by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
-    var selectedCountry by remember {
-        mutableStateOf(
-            CountryCode(R.drawable.ic_google, "+1", "United States")
-        )
+    var countryCode by remember { mutableStateOf("+91") }
+
+    val isPhoneValid by derivedStateOf {
+        try {
+            val phoneUtil = PhoneNumberUtil.getInstance()
+            val regionCode = phoneUtil.getRegionCodeForCountryCode(countryCode.replace("+", "").toInt())
+            val numberProto = phoneUtil.parse(phoneNumber, regionCode)
+            phoneUtil.isValidNumber(numberProto)
+        } catch (e: Exception) {
+            false
+        }
     }
 
-    val countries = listOf(
-        CountryCode(R.drawable.ic_facebook, "+1", "United States"),
-        CountryCode(R.drawable.ic_google, "+84", "Vietnam"),
-        CountryCode(R.drawable.ic_apple, "+81", "Japan")
-    )
+//    // Observe verificationId to trigger navigation
+//    val verificationId by viewModel.verificationId.collectAsState()
+//
+//    LaunchedEffect(verificationId) {
+//        if (verificationId != null) {
+//            navController.navigate("verify_code")
+//        }
+//    }
+
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(60.dp))
-
-        // Title
-        Text(
-            text = "My mobile",
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = Color.Black
-        )
-
+        Text("My mobile", fontWeight = FontWeight.Bold, fontSize = 22.sp)
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Subtitle
         Text(
-            text = "Please enter your valid phone number. We will send you a 4-digit code to verify your account.",
+            "Enter your valid phone number. We will send you an OTP.",
             color = Color.Gray,
             fontSize = 14.sp,
-            textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
-
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Phone input field
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -85,46 +86,26 @@ fun PhoneNumberScreen(navController: NavController) {
                 .border(width = 1.dp, color = Color.LightGray, shape = RoundedCornerShape(12.dp))
                 .padding(horizontal = 12.dp)
         ) {
-            // Country dropdown trigger
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable { expanded = true }
-            ) {
-                Image(
-                    painter = painterResource(id = selectedCountry.flagRes),
-                    contentDescription = "Flag",
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = selectedCountry.code, fontSize = 16.sp, color = Color.Black)
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                countries.forEach { country ->
-                    DropdownMenuItem(
-                        text = { Text("${country.flagRes} ${country.name} (${country.code})") },
-                        onClick = {
-                            selectedCountry = country
-                            expanded = false
+            AndroidView(
+                factory = { ctx ->
+                    CountryCodePicker(ctx).apply {
+                        setDefaultCountryUsingNameCode("IN")
+                        setAutoDetectedCountry(true)
+                        setOnCountryChangeListener {
+                            countryCode = "+${selectedCountryCode}"
                         }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Phone number input
+                    }
+                },
+                modifier = Modifier.width(140.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
                 value = phoneNumber,
                 onValueChange = { phoneNumber = it },
                 placeholder = { Text("331 623 8413") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent,
@@ -135,24 +116,19 @@ fun PhoneNumberScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Continue button
         Button(
             onClick = {
-                navController.navigate("verify_code") // Chuyển sang tab khác
+                val fullNumber = countryCode + phoneNumber
+                //viewModel.sendOtp(fullNumber,activity)
             },
+            enabled = isPhoneValid,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Text(
-                text = "Continue",
-                color = Color.Black,
-                fontSize = 16.sp
-            )
+            Text("Continue", color = Color.Black, fontSize = 16.sp)
         }
     }
 }
-
-

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.dating.ui.theme.AppColors
 
 
 @Composable
@@ -40,22 +41,22 @@ fun GenderSelectionScreen(navController: NavController) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF8F8F8))
+                    .background(Color.White)
                     .clickable { navController.popBackStack() }
                     .align(Alignment.CenterStart),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink,)
             }
 
             // Skip
             Text(
                 text = "Skip",
-                color = Color(0xFFD44BDB),
+                color = AppColors.Text_Pink,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .clickable { navController.navigate("home") }
+                    .clickable { navController.navigate("interest_select") }
             )
         }
 
@@ -66,7 +67,7 @@ fun GenderSelectionScreen(navController: NavController) {
             text = "I am a",
             fontWeight = FontWeight.Bold,
             fontSize = 28.sp,
-            color = Color.Black,
+            color = AppColors.Text_LightBlack,
             modifier = Modifier.align(Alignment.Start)
         )
 
@@ -106,7 +107,7 @@ fun GenderSelectionScreen(navController: NavController) {
         Button(
             onClick = {
                 // TODO: Save gender và chuyển sang màn tiếp theo
-                navController.navigate("home")
+                navController.navigate("interest_select")
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),
@@ -116,7 +117,7 @@ fun GenderSelectionScreen(navController: NavController) {
         ) {
             Text(
                 text = "Continue",
-                color = Color(0xFF2B0A2B),
+                color = AppColors.Main_Primary,
                 fontSize = 16.sp
             )
         }
@@ -137,7 +138,7 @@ fun GenderOption(
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isSelected) Color(0xFFFFF1FC) else Color(0xFFF8F8F8))
+            .background(if (isSelected) AppColors.Main_Secondary1 else Color(0xFFF8F8F8))
             .clickable { onClick() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -147,11 +148,11 @@ fun GenderOption(
             text = label,
             fontSize = 16.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) Color(0xFF2B0A2B) else Color.Black
+            color = if (isSelected) AppColors.Main_Primary else AppColors.Text_LightBlack
         )
 
         when {
-            isSelected -> Icon(Icons.Default.Check, contentDescription = "Selected", tint = Color(0xFF2B0A2B))
+            isSelected -> Icon(Icons.Default.Check, contentDescription = "Selected", tint = AppColors.Main_Primary)
             showArrow -> Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Arrow", tint = Color.Gray)
         }
     }
