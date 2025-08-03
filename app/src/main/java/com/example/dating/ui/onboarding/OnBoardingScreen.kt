@@ -24,7 +24,7 @@ import androidx.navigation.NavController
 import com.example.dating.R
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
-import com.example.dating.ui.theme.AppColor
+
 data class OnboardingPage(
     val image: Int,
     val title: String,
@@ -60,7 +60,7 @@ fun OnboardingScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.onPrimary),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -98,14 +98,13 @@ fun OnboardingScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = pages[page].title,
-                    color = AppColor.Main_Black,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
+                    fontSize = 20.sp
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = pages[page].description,
-                    color = AppColor.Text_LightBlack,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -127,7 +126,7 @@ fun OnboardingScreen(navController: NavController) {
                         .padding(4.dp)
                         .size(if (isSelected) 10.dp else 8.dp)
                         .clip(CircleShape)
-                        .background(if (isSelected) Color.Black else Color.LightGray)
+                        .background(if (isSelected) MaterialTheme.colorScheme.onSurface else Color.LightGray)
                 )
             }
         }
@@ -136,14 +135,14 @@ fun OnboardingScreen(navController: NavController) {
         Button(
             onClick = { navController.navigate("register") },
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AppColor.Main_Secondary1),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF8EAFB)),
             modifier = Modifier
                 .padding(horizontal = 32.dp)
                 .fillMaxWidth()
         ) {
             Text(
                 text = "Create an account",
-                color = AppColor.Main_Primary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp
             )
         }
@@ -155,8 +154,8 @@ fun OnboardingScreen(navController: NavController) {
             onClick = { navController.navigate("login") }
         ) {
             Row {
-                Text(text = "Already have an account? ", color = AppColor.Text_Black)
-                Text(text = "Sign In", color = AppColor.Text_Pink)
+                Text(text = "Already have an account? ", color = Color.Gray)
+                Text(text = "Sign In", color = Color.Magenta)
             }
         }
 

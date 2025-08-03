@@ -56,7 +56,7 @@ fun SignUpScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(
-                onClick = { /* TODO: Chuyển qua màn đăng ký email */ },
+                onClick = { navController.navigate("login") },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFF1FC),
                     contentColor = Color.Black
