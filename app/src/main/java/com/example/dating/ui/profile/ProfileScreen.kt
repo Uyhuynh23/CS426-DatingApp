@@ -31,20 +31,25 @@ import java.util.*
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.R
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dating.viewmodel.ProfileViewModel
 
 @Composable
 fun ProfileScreen(navController: NavController) {
     var firstName by remember { mutableStateOf("David") }
     var lastName by remember { mutableStateOf("Peterson") }
     var birthday by remember { mutableStateOf<Date?>(null) }
-    var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var selectedImageUrl by remember { mutableStateOf<android.net.Uri?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
+    val profileViewModel: ProfileViewModel = viewModel()
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        selectedImageUri = uri
+        selectedImageUrl = uri
     }
 
     Column(
@@ -109,9 +114,9 @@ fun ProfileScreen(navController: NavController) {
                     .clickable { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedImageUri != null) {
+                if (selectedImageUrl != null) {
                     AsyncImage(
-                        model = selectedImageUri,
+                        model = selectedImageUrl,
                         contentDescription = "Profile Image",
                         modifier = Modifier
                             .size(120.dp)
@@ -219,10 +224,24 @@ fun ProfileScreen(navController: NavController) {
         // Confirm Button
         Button(
             onClick = {
-                // TODO: Save profile data
-                navController.navigate("gender_select")
+                isSaving = true
+                saveError = null
+                profileViewModel.saveProfile(
+                    firstName = firstName,
+                    lastName = lastName,
+                    birthday = birthday?.let { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it) },
+                    imageUrl = selectedImageUrl?.toString(),
+                    onSuccess = {
+                        isSaving = false
+                        navController.navigate("gender_select")
+                    },
+                    onFailure = { e ->
+                        isSaving = false
+                        saveError = e.message
+                    }
+                )
             },
-            enabled = firstName.isNotBlank() && lastName.isNotBlank() && birthday != null,
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && birthday != null && !isSaving,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -232,11 +251,22 @@ fun ProfileScreen(navController: NavController) {
                 disabledContainerColor = Color.LightGray
             )
         ) {
+            if (isSaving) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppColors.Main_Primary)
+            } else {
+                Text(
+                    text = "Confirm",
+                    color = AppColors.Main_Primary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        if (saveError != null) {
             Text(
-                text = "Confirm",
-                color = AppColors.Main_Primary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+                text = saveError ?: "",
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 

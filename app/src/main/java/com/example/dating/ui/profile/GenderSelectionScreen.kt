@@ -19,11 +19,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.ui.theme.AppColors
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dating.viewmodel.ProfileViewModel
 
 
 @Composable
 fun GenderSelectionScreen(navController: NavController) {
-    var selectedGender by remember { mutableStateOf("Man") } // mặc định chọn Man
+    var selectedGender by remember { mutableStateOf("Man") }
+    val profileViewModel: ProfileViewModel = viewModel()
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -106,8 +111,19 @@ fun GenderSelectionScreen(navController: NavController) {
         // Continue Button
         Button(
             onClick = {
-                // TODO: Save gender và chuyển sang màn tiếp theo
-                navController.navigate("interest_select")
+                isSaving = true
+                saveError = null
+                profileViewModel.updateGender(
+                    gender = selectedGender,
+                    onSuccess = {
+                        isSaving = false
+                        navController.navigate("interest_select")
+                    },
+                    onFailure = { e ->
+                        isSaving = false
+                        saveError = e.message
+                    }
+                )
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),
@@ -115,10 +131,21 @@ fun GenderSelectionScreen(navController: NavController) {
                 .fillMaxWidth()
                 .height(56.dp)
         ) {
+            if (isSaving) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppColors.Main_Primary)
+            } else {
+                Text(
+                    text = "Continue",
+                    color = AppColors.Main_Primary,
+                    fontSize = 16.sp
+                )
+            }
+        }
+        if (saveError != null) {
             Text(
-                text = "Continue",
-                color = AppColors.Main_Primary,
-                fontSize = 16.sp
+                text = saveError ?: "",
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 

@@ -29,6 +29,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
+import com.example.dating.navigation.Screen
 
 @Composable
 fun SignUpScreen(navController: NavController) {
@@ -98,11 +99,35 @@ fun SignUpScreen(navController: NavController) {
                 .height(56.dp)
                 .shadow(8.dp, RoundedCornerShape(24.dp))
         ) {
-            Text(
-                "Continue with email",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+            Button(
+                onClick = { navController.navigate(Screen.EmailScreen.route) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFF1FC),
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text("Continue with email")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { navController.navigate("phone_number") },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4A154B),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text("Use phone number")
+            }
         }
 
         Spacer(modifier = Modifier.height(36.dp))
