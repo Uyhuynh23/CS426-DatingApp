@@ -16,6 +16,7 @@ import com.example.dating.ui.auth.VerifyEmailScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
+import com.example.dating.ui.profile.ProfileDetailsScreen
 import com.example.dating.ui.profile.ProfileScreen
 import com.example.dating.ui.profile.SearchFriendScreen
 import com.example.dating.viewmodel.AuthViewModel
@@ -50,6 +51,10 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
 
         composable(Screen.Profile.route) {
             ProfileScreen(navController = navController)
+        }
+
+        composable(Screen.ProfileDetails.route) {
+            ProfileDetailsScreen(navController = navController)
         }
 
         composable(Screen.VerifyCode.route) {
