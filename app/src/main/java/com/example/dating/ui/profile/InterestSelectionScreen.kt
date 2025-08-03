@@ -23,6 +23,8 @@ import androidx.navigation.NavController
 import com.example.dating.R
 import com.example.dating.ui.theme.AppColors
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dating.viewmodel.ProfileViewModel
 
 data class Interest(
     val name: String,
@@ -49,6 +51,9 @@ fun InterestSelectionScreen(navController: NavController) {
     )
 
     val selectedInterests = remember { mutableStateListOf<String>() }
+    val profileViewModel: ProfileViewModel = viewModel()
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -135,23 +140,48 @@ fun InterestSelectionScreen(navController: NavController) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // Continue Button
         Button(
             onClick = {
-                // TODO: save selectedInterests
-                navController.navigate("search_friend") // Navigate to the next screen
+                isSaving = true
+                saveError = null
+                profileViewModel.updateInterests(
+                    interests = selectedInterests.toList(),
+                    onSuccess = {
+                        isSaving = false
+                        navController.navigate("search_friend")
+                    },
+                    onFailure = { e ->
+                        isSaving = false
+                        saveError = e.message
+                    }
+                )
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
-            shape = RoundedCornerShape(16.dp),
+            enabled = selectedInterests.isNotEmpty() && !isSaving,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AppColors.Main_Secondary1,
+                disabledContainerColor = Color.LightGray
+            )
         ) {
+            if (isSaving) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppColors.Main_Primary)
+            } else {
+                Text(
+                    text = "Confirm",
+                    color = AppColors.Main_Primary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        if (saveError != null) {
             Text(
-                text = "Continue",
-                color = Color(0xFF2B0A2B),
-                fontSize = 16.sp
+                text = saveError ?: "",
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 

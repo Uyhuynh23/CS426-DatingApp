@@ -1,4 +1,3 @@
-
 package com.example.dating.navigation
 
 import LoginScreen
@@ -12,6 +11,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.ui.auth.SignUpScreen
 import com.example.dating.ui.auth.PhoneNumberScreen
 import com.example.dating.ui.auth.VerifyCodeScreen
+import com.example.dating.ui.auth.EmailScreen
+import com.example.dating.ui.auth.VerifyEmailScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
@@ -23,8 +24,7 @@ import com.example.dating.viewmodel.AuthViewModel
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Profile.route
-
+        startDestination = Screen.Login.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -38,6 +38,14 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         composable(Screen.PhoneNumber.route) {
             // Phone number screen can be implemented here
             PhoneNumberScreen(navController)
+        }
+
+        composable(Screen.EmailScreen.route) {
+            EmailScreen(navController)
+        }
+
+        composable(Screen.VerifyEmail.route) {
+            VerifyEmailScreen(navController)
         }
 
         composable(Screen.Profile.route) {
@@ -75,5 +83,3 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         }
     }
 }
-
-

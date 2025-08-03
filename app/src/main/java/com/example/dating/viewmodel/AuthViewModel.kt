@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -47,5 +48,16 @@ class AuthViewModel @Inject constructor(
         repository.logout()
         _loginFlow.value = null
         _signupFlow.value = null
+    }
+
+    suspend fun signupUserWithEmailVerification(email: String, password: String): String? {
+        val result = repository.signupWithEmailVerification(email, password)
+        return result
+    }
+
+    suspend fun checkEmailVerified(): Boolean {
+        val user = repository.currentUser
+        user?.reload()?.await()
+        return user?.isEmailVerified == true
     }
 }

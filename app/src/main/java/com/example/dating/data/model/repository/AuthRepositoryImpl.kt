@@ -5,6 +5,9 @@ import com.example.dating.data.model.utils.await
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -32,6 +35,17 @@ class AuthRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             Resource.Failure(e)
+        }
+    }
+
+    override suspend fun signupWithEmailVerification(email: String, password: String): String? {
+        return try {
+            val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
+            result.user?.sendEmailVerification()?.await()
+            null // null means success
+        } catch (e: Exception) {
+            e.printStackTrace()
+            e.message ?: "Failed to sign up or send verification email"
         }
     }
 

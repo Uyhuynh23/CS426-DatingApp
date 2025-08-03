@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.R
+import com.example.dating.navigation.Screen
 
 @Composable
 fun SignUpScreen(navController: NavController) {
@@ -56,7 +57,7 @@ fun SignUpScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(
-                onClick = { navController.navigate("login") },
+                onClick = { navController.navigate(Screen.EmailScreen.route) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFFF1FC),
                     contentColor = Color.Black
@@ -142,5 +143,3 @@ fun SocialButton(iconRes: Int) {
         )
     }
 }
-
-

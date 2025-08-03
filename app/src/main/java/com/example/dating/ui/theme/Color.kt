@@ -7,7 +7,7 @@ import androidx.compose.ui.geometry.Offset
 object AppColors {
     // Main Colors
     val Main_Primary = Color(0xFF4B164C)
-    val Main_Secondary1 = Color(0xFFFCF3FA)
+    val Main_Secondary1 = Color(0xFFFFF1FC)
     val Main_Black = Color(0xFF22172A)
     val Main_Pink = Color(0xFFB12886)
     val Main_PinkBackground = Color(0xFFFDF7FD)
