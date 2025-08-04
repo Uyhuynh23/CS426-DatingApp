@@ -3,10 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
-        id("com.google.dagger.hilt.android")
-        id("kotlin-kapt")
-
-
+    id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
 }
 
 android {
@@ -45,6 +43,11 @@ android {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+
     //Country Code Picker
     implementation ("com.hbb20:ccp:2.6.0")
 

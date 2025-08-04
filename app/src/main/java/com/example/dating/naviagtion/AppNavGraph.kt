@@ -1,3 +1,4 @@
+
 package com.example.dating.navigation
 
 import LoginScreen
@@ -11,12 +12,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.ui.auth.SignUpScreen
 import com.example.dating.ui.auth.PhoneNumberScreen
 import com.example.dating.ui.auth.VerifyCodeScreen
-import com.example.dating.ui.auth.EmailScreen
 import com.example.dating.ui.auth.VerifyEmailScreen
+import com.example.dating.ui.auth.EmailScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
-import com.example.dating.ui.profile.ProfileDetailsScreen
 import com.example.dating.ui.profile.ProfileScreen
 import com.example.dating.ui.profile.SearchFriendScreen
 import com.example.dating.viewmodel.AuthViewModel
@@ -42,20 +42,15 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
             PhoneNumberScreen(navController)
         }
 
-        composable(Screen.EmailScreen.route) {
-            EmailScreen(navController)
-        }
-
-        composable(Screen.VerifyEmail.route) {
-            VerifyEmailScreen(navController)
-        }
-
         composable(Screen.Profile.route) {
             ProfileScreen(navController = navController)
         }
 
-        composable(Screen.ProfileDetails.route) {
-            ProfileDetailsScreen(navController = navController)
+        composable(Screen.EmailScreen.route) {
+            EmailScreen(navController = navController)
+        }
+        composable(Screen.VerifyEmail.route) {
+            VerifyEmailScreen(navController = navController)
         }
 
         composable(Screen.VerifyCode.route) {
@@ -89,3 +84,5 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         }
     }
 }
+
+
