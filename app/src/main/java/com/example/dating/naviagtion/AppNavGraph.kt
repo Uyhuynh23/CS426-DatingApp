@@ -21,6 +21,7 @@ import com.example.dating.ui.profile.ProfileScreen
 import com.example.dating.ui.profile.SearchFriendScreen
 import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.ui.mainscreens.HomeScreen
+import com.example.dating.ui.profile.ProfileDetailsScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
@@ -44,6 +45,10 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
 
         composable(Screen.Profile.route) {
             ProfileScreen(navController = navController)
+        }
+
+        composable(Screen.ProfileDetails.route) {
+            ProfileDetailsScreen(navController = navController)
         }
 
         composable(Screen.EmailScreen.route) {
