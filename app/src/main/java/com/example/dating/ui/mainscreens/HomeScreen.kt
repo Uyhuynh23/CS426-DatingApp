@@ -52,7 +52,11 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.vector.ImageVector
 import java.util.Calendar
 import androidx.compose.runtime.MutableState
-
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.util.lerp
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 @Composable
 fun HomeScreen(navController: NavController) {
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
@@ -200,55 +204,84 @@ fun ProfileCard(
 
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(0f) }
+    val isDragging = remember { mutableStateOf(false) }
+    val likeProgress = (offsetX.value / 200f).coerceIn(0f, 1f)
+    val dislikeProgress = (-offsetX.value / 200f).coerceIn(0f, 1f)
+    val iconAlpha = maxOf(likeProgress, dislikeProgress)
+    val iconScale = 1f + 0.3f * iconAlpha
+    val cardRotation = (offsetX.value / 15).coerceIn(-25f, 25f)
+    val threshold = 200f
+    val nextProfile = profiles.getOrNull(profileIndex.value + 1)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(550.dp)
-            .padding(horizontal = 30.dp)
-            .pointerInput(profileIndex.value) {
-                detectDragGestures(
-                    onDragEnd = {
-                        scope.launch {
-                            when {
-                                offsetX.value > 200f -> {
-                                    // Swiped right (like)
-                                    onLike(currentProfile)
-                                    offsetX.snapTo(0f)
-                                    profileIndex.value ++
-
-                                }
-                                offsetX.value < -200f -> {
-                                    // Swiped left (dislike)
-                                    onDislike(currentProfile)
-                                    offsetX.snapTo(0f)
-                                    profileIndex.value ++
-
-                                }
-                                else -> {
-                                    // Snap back
-                                    offsetX.animateTo(0f, tween(300))
-                                }
-                            }
-                        }
-                    },
-                    onDrag = { change, dragAmount ->
-                        scope.launch {
-                            offsetX.snapTo(offsetX.value + dragAmount.x)
-                        }
-                    }
-                )
-            }
-            .offset { IntOffset(offsetX.value.toInt(), 0) },
+            .padding(horizontal = 30.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Next card (subtle scale/alpha)
+        if (nextProfile != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(550.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color(0xFF23222B))
+                    .graphicsLayer(
+                        scaleX = lerp(0.95f, 1f, iconAlpha),
+                        scaleY = lerp(0.95f, 1f, iconAlpha),
+                        alpha = lerp(0.7f, 1f, iconAlpha)
+                    )
+            ) {}
+        }
+        // Top card (draggable)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(550.dp)
+                .offset { IntOffset(offsetX.value.toInt(), offsetY.value.toInt()) }
+                .rotate(cardRotation)
                 .clip(RoundedCornerShape(32.dp))
                 .background(Color(0xFF23222B))
-                .zIndex(1f)
+                .pointerInput(profileIndex.value) {
+                    detectDragGestures(
+                        onDragStart = { isDragging.value = true },
+                        onDragEnd = {
+                            isDragging.value = false
+                            scope.launch {
+                                when {
+                                    offsetX.value > threshold -> {
+                                        onLike(currentProfile)
+                                        offsetX.animateTo(1000f, tween(350))
+                                        offsetX.snapTo(0f)
+                                        offsetY.snapTo(0f)
+                                        profileIndex.value++
+                                    }
+                                    offsetX.value < -threshold -> {
+                                        onDislike(currentProfile)
+                                        offsetX.animateTo(-1000f, tween(350))
+                                        offsetX.snapTo(0f)
+                                        offsetY.snapTo(0f)
+                                        profileIndex.value++
+                                    }
+                                    else -> {
+                                        offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                        offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                    }
+                                }
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            scope.launch {
+                                offsetX.snapTo(offsetX.value + dragAmount.x)
+                                offsetY.snapTo(offsetY.value + dragAmount.y)
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
         ) {
             // Portrait Image (placeholder)
             Image(
@@ -308,6 +341,26 @@ fun ProfileCard(
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
+                )
+            }
+            // Like/Dislike Icon Overlay
+            if (likeProgress > 0.05f) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Like",
+                    tint = Color.Red.copy(alpha = iconAlpha),
+                    modifier = Modifier
+                        .size((96f * iconScale).dp)
+                        .align(Alignment.Center)
+                )
+            } else if (dislikeProgress > 0.05f) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dislike",
+                    tint = Color.White.copy(alpha = iconAlpha),
+                    modifier = Modifier
+                        .size((96f * iconScale).dp)
+                        .align(Alignment.Center)
                 )
             }
         }
