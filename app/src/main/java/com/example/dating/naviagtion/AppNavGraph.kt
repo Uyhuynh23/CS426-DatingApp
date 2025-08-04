@@ -20,12 +20,13 @@ import com.example.dating.ui.profile.ProfileDetailsScreen
 import com.example.dating.ui.profile.ProfileScreen
 import com.example.dating.ui.profile.SearchFriendScreen
 import com.example.dating.viewmodel.AuthViewModel
+import com.example.dating.ui.mainscreens.HomeScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = Screen.Home.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -84,7 +85,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
 
         // Home
         composable(Screen.Home.route) {
-            Text("Home Screen - Test only")
+            HomeScreen(navController)
         }
     }
 }

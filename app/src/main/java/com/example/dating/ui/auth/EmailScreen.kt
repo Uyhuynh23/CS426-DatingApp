@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.example.dating.ui.theme.AppColors
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @Composable
 fun EmailScreen(navController: NavController) {
@@ -44,6 +46,18 @@ fun EmailScreen(navController: NavController) {
             .fillMaxSize()
             .background(Color.White)
     ) {
+        IconButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 16.dp, start = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = AppColors.Text_Pink
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()

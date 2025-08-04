@@ -1,6 +1,5 @@
 package com.example.dating.viewmodel
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -57,6 +56,26 @@ class ProfileViewModel : ViewModel() {
         viewModelScope.launch {
             firestore.collection("users").document(userId)
                 .update("interests", interests)
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { e -> onFailure(e) }
+        }
+    }
+
+    fun updateJobLocationDescription(
+        job: String?,
+        location: String?,
+        description: String?,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            firestore.collection("users").document(userId)
+                .update(mapOf(
+                    "job" to job,
+                    "location" to location,
+                    "description" to description
+                ))
                 .addOnSuccessListener { onSuccess() }
                 .addOnFailureListener { e -> onFailure(e) }
         }

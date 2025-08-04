@@ -30,6 +30,7 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
     val isLoginFailed = authResource?.value is Resource.Failure
     var isEmailFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
+    var loginClicked by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
 
@@ -107,7 +108,10 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
             )
 
             Button(
-                onClick = { viewModel?.loginUser(email, password) },
+                onClick = {
+                    loginClicked = true
+                    viewModel?.loginUser(email, password)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Main_Secondary1,
@@ -139,37 +143,41 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
                 )
             }
 
-            authResource?.value?.let {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.CenterHorizontally)
-                ) {
-                    when (it) {
-                        is Resource.Failure -> {
-                            // Clear focus on failure
-                            LaunchedEffect(Unit) {
-                                isEmailFocused = false
-                                isPasswordFocused = false
-                                focusManager.clearFocus()
+            if (loginClicked) {
+                authResource?.value?.let {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.CenterHorizontally)
+                    ) {
+                        when (it) {
+                            is Resource.Failure -> {
+                                // Clear focus on failure
+                                LaunchedEffect(Unit) {
+                                    isEmailFocused = false
+                                    isPasswordFocused = false
+                                    focusManager.clearFocus()
+                                    loginClicked = false
+                                }
+                                Text(
+                                    text = it.exception.message ?: "Login failed",
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .padding(top = 16.dp)
+                                        .align(Alignment.Center)
+                                )
                             }
-                            Text(
-                                text = it.exception.message ?: "Login failed",
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier
-                                    .padding(top = 16.dp)
-                                    .align(Alignment.Center)
-                            )
-                        }
-                        is Resource.Loading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                        }
-                        is Resource.Success -> {
-                            LaunchedEffect(Unit) {
-                                navController.navigate("profile_details") {
-                                    //popUpTo("login") { inclusive = false }
+                            is Resource.Loading -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
+                            is Resource.Success -> {
+                                LaunchedEffect(Unit) {
+                                    navController.navigate("profile_details") {
+                                        //popUpTo("login") { inclusive = false }
+                                    }
+                                    loginClicked = false
                                 }
                             }
                         }
