@@ -35,7 +35,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         }
 
         composable(Screen.Register.route) {
-            SignUpScreen(navController)
+            SignUpScreen(viewModel=authViewModel,navController=navController)
         }
 
         composable(Screen.PhoneNumber.route) {
