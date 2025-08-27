@@ -28,13 +28,17 @@ import com.example.dating.ui.theme.AppColors
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import kotlinx.coroutines.launch
 import com.example.dating.navigation.Screen
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.firebase.auth.GoogleAuthProvider
+import com.example.dating.data.model.Resource
+import com.example.dating.viewmodel.AuthViewModel
+import com.google.firebase.auth.FirebaseUser
 
 @Composable
-fun SignUpScreen(navController: NavController) {
+fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val googleSignInState = viewModel?.googleSignInFlow?.collectAsState()
 
     // Google Sign-In configuration
     val googleSignInLauncher = rememberLauncherForActivityResult(
@@ -43,20 +47,36 @@ fun SignUpScreen(navController: NavController) {
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
-            Log.d("GoogleSignIn", "Sign in successful!")
-            Log.d("GoogleSignIn", "User name: ${account.displayName}")
-            Log.d("GoogleSignIn", "User email: ${account.email}")
-
-            // Navigate to Home screen after successful sign in
-            navController.navigate("home") {
-                popUpTo("register") { inclusive = true }
+            account.idToken?.let { idToken ->
+                Log.d("GoogleSignIn", "ID Token received")
+                viewModel?.signupWithGoogle(idToken)
+            } ?: run {
+                Log.e("GoogleSignIn", "ID Token is null")
             }
         } catch (e: ApiException) {
-            Log.e("GoogleSignIn", "Sign in failed with code: ${e.statusCode}")
-            Log.e("GoogleSignIn", "Error message: ${e.message}")
+            Log.e("GoogleSignIn", "Sign in failed with code: ${e.statusCode}, message: ${e.message}")
         }
     }
 
+
+    // Observe Google Sign-In state
+    LaunchedEffect(googleSignInState) {
+        when (val state = googleSignInState) {
+            is Resource.Success<FirebaseUser> -> {
+                Log.d("GoogleSignIn", "Authentication successful")
+                navController.navigate("home") {
+                    popUpTo("register") { inclusive = true }
+                }
+            }
+            is Resource.Failure -> {
+                Log.e("GoogleSignIn", "Authentication failed: ${state.exception.message}")
+            }
+            is Resource.Loading -> {
+                Log.d("GoogleSignIn", "Authentication in progress...")
+            }
+            null -> { /* Initial state */ }
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -87,52 +107,41 @@ fun SignUpScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
+        // Email Button
         Button(
-            onClick = { navController.navigate("login") },
+            onClick = { navController.navigate(Screen.EmailScreen.route) },
             colors = ButtonDefaults.buttonColors(
-                containerColor = AppColors.Main_Secondary1,
-                contentColor = AppColors.Main_Primary
+                containerColor = Color(0xFFFFF1FC),
+                contentColor = Color.Black
             ),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .shadow(8.dp, RoundedCornerShape(24.dp))
         ) {
-            Button(
-                onClick = { navController.navigate(Screen.EmailScreen.route) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFF1FC),
-                    contentColor = Color.Black
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text("Continue with email")
-            }
+            Text("Continue with email")
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = { navController.navigate("phone_number") },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4A154B),
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text("Use phone number")
-            }
+        // Phone Button
+        Button(
+            onClick = { navController.navigate("phone_number") },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4A154B),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        ) {
+            Text("Use phone number")
         }
 
         Spacer(modifier = Modifier.height(36.dp))
 
-        // Divider + text giữa
+        // Divider
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -163,12 +172,18 @@ fun SignUpScreen(navController: NavController) {
             SocialSquareButton(
                 iconRes = R.drawable.ic_google,
                 contentDescription = "Google",
-                onClick = { signInWithGoogle(context, googleSignInLauncher) }
+                onClick = {
+                    viewModel?.performGoogleSignIn(context) { intent ->
+                        googleSignInLauncher.launch(intent)
+                    }
+                },
+                isLoading = googleSignInState is Resource.Loading
             )
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // Terms and Privacy
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -191,6 +206,8 @@ fun SignUpScreen(navController: NavController) {
     }
 }
 
+
+
 @Composable
 fun SocialSquareButton(
     iconRes: Int,
@@ -198,7 +215,8 @@ fun SocialSquareButton(
     onClick: () -> Unit,
     backgroundColor: Color = Color.White,
     borderColor: Color = Color(0xFFE0E0E0),
-    cornerRadius: Dp = 16.dp
+    cornerRadius: Dp = 16.dp,
+    isLoading: Boolean = false
 ) {
     Box(
         modifier = Modifier
@@ -206,34 +224,39 @@ fun SocialSquareButton(
             .clip(RoundedCornerShape(cornerRadius))
             .background(backgroundColor)
             .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(cornerRadius))
-            .clickable { onClick() },
+            .clickable(enabled = !isLoading) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = contentDescription,
-            modifier = Modifier.size(32.dp),
-            contentScale = ContentScale.Fit
-        )
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(32.dp),
+                contentScale = ContentScale.Fit
+            )
+        }
     }
 }
-
-// Helper function for Google Sign-In
-private fun signInWithGoogle(
-    context: Context,
-    launcher: ActivityResultLauncher<Intent>
-) {
-    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestEmail()
-        .requestProfile()
-        .requestIdToken("224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com")
-        .build()
-
-    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-
-    // Sign out first to ensure account picker shows
-    googleSignInClient.signOut().addOnCompleteListener {
-        val signInIntent = googleSignInClient.signInIntent
-        launcher.launch(signInIntent)
-    }
-}
+//
+//private fun signInWithGoogle(
+//    context: Context,
+//    launcher: ActivityResultLauncher<Intent>
+//) {
+//    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//        .requestEmail()
+//        .requestProfile()
+//        .requestIdToken("224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com")
+//        .build()
+//
+//    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+//
+//    googleSignInClient.signOut().addOnCompleteListener {
+//        val signInIntent = googleSignInClient.signInIntent
+//        launcher.launch(signInIntent)
+//    }
+//}
