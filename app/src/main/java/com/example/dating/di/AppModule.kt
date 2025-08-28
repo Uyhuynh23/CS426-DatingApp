@@ -24,4 +24,6 @@ object AppModule {
     @Provides
     @Singleton
     fun providesAuthRepository(impl: AuthRepositoryImpl): AuthRepository = impl
+
+
 }

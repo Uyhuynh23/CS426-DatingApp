@@ -12,7 +12,6 @@ import com.example.dating.navigation.AppNavGraph
 import com.example.dating.ui.theme.DatingTheme
 import dagger.hilt.android.AndroidEntryPoint
 
-
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
