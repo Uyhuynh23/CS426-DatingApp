@@ -37,18 +37,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.dating.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Applier
-import kotlinx.coroutines.tasks.await
 import com.example.dating.ui.theme.AppColors
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.vector.ImageVector
 import java.util.Calendar
 import androidx.compose.runtime.MutableState
@@ -70,13 +63,18 @@ fun HomeScreen(navController: NavController) {
     val profileIndex = remember { mutableStateOf(0) }
 
     // Helper functions
-    suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<Map<String, Any>>, homeViewModel: HomeViewModel) {
+    suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<Map<String, Any>>, homeViewModel: HomeViewModel, navController: NavController) {
         val currentProfile = profiles.getOrNull(profileIndex.value)
         if (currentProfile != null) {
             if (isLike) {
                 val likedUserId = currentProfile["uid"] as? String
                 if (likedUserId != null) {
-                    homeViewModel.addFavorite(likedUserId)
+                    homeViewModel.likeProfile(likedUserId)
+                    // Check for match and navigate if found
+                    val matchId = homeViewModel.matchFoundUserId.value
+                    if (matchId != null) {
+                        navController.navigate("match")
+                    }
                 }
             }
             profileIndex.value++
@@ -89,6 +87,14 @@ fun HomeScreen(navController: NavController) {
 
     LaunchedEffect(Unit) {
         homeViewModel.fetchHome()
+    }
+
+    // Observe matchFoundUserId and navigate if a match is found
+    val matchFoundUserId by homeViewModel.matchFoundUserId.collectAsState()
+    LaunchedEffect(matchFoundUserId) {
+        if (matchFoundUserId != null) {
+            navController.navigate("match/${matchFoundUserId}")
+        }
     }
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
@@ -111,13 +117,17 @@ fun HomeScreen(navController: NavController) {
                 ProfileCard(
                     profiles = profiles,
                     profileIndex = profileIndex,
-                    handleProfileAction = ::handleProfileAction,
+                    handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                        handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
+                    },
                     animateSwipe = ::animateSwipe
                 )
                 ActionButtons(
                     profiles = profiles,
                     profileIndex = profileIndex,
-                    handleProfileAction = ::handleProfileAction,
+                    handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                        handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
+                    },
                     animateSwipe = ::animateSwipe
                 )
             }
