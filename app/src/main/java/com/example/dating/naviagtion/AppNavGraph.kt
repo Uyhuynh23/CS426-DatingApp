@@ -1,4 +1,3 @@
-
 package com.example.dating.navigation
 
 import LoginScreen
@@ -15,6 +14,7 @@ import com.example.dating.ui.auth.VerifyCodeScreen
 import com.example.dating.ui.auth.VerifyEmailScreen
 import com.example.dating.ui.auth.EmailScreen
 import com.example.dating.ui.mainscreens.FavoriteScreen
+import com.example.dating.ui.mainscreens.MatchScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
@@ -28,7 +28,7 @@ import com.example.dating.ui.profile.ProfileDetailsScreen
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Login.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -93,7 +93,17 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         composable(Screen.Favorite.route) {
             FavoriteScreen(navController)
         }
+
+        // Match
+        composable(
+            route = Screen.Match.route + "/{matchedUserId}",
+        ) { backStackEntry ->
+            val matchedUserId = backStackEntry.arguments?.getString("matchedUserId")
+            if (matchedUserId != null) {
+                MatchScreen(navController, matchedUserId)
+            } else {
+                Text("No matched user ID provided")
+            }
+        }
     }
 }
-
-
