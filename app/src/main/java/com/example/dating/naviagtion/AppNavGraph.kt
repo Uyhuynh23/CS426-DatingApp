@@ -14,6 +14,7 @@ import com.example.dating.ui.auth.PhoneNumberScreen
 import com.example.dating.ui.auth.VerifyCodeScreen
 import com.example.dating.ui.auth.VerifyEmailScreen
 import com.example.dating.ui.auth.EmailScreen
+import com.example.dating.ui.mainscreens.FavoriteScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
@@ -86,6 +87,11 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         // Home
         composable(Screen.Home.route) {
             HomeScreen(navController)
+        }
+
+        // Favorite
+        composable(Screen.Favorite.route) {
+            FavoriteScreen(navController)
         }
     }
 }

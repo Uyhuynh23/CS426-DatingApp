@@ -57,62 +57,68 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.util.lerp
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dating.viewmodel.HomeViewModel
+import androidx.compose.runtime.collectAsState
+
 @Composable
 fun HomeScreen(navController: NavController) {
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-    val profiles = remember { mutableStateListOf<Map<String, Any>>() }
-    val isLoading = remember { mutableStateOf(true) }
-    val errorMessage = remember { mutableStateOf<String?>(null) }
-    val coroutineScope = rememberCoroutineScope()
+    val homeViewModel: HomeViewModel = viewModel()
+    val profiles by homeViewModel.profiles.collectAsState()
+    val isLoading by homeViewModel.isLoading.collectAsState()
+    val errorMessage by homeViewModel.errorMessage.collectAsState()
+    val profileIndex = remember { mutableStateOf(0) }
+
+    // Helper functions
+    suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<Map<String, Any>>, homeViewModel: HomeViewModel) {
+        val currentProfile = profiles.getOrNull(profileIndex.value)
+        if (currentProfile != null) {
+            if (isLike) {
+                val likedUserId = currentProfile["uid"] as? String
+                if (likedUserId != null) {
+                    homeViewModel.addFavorite(likedUserId)
+                }
+            }
+            profileIndex.value++
+        }
+    }
+    suspend fun animateSwipe(offsetX: Animatable<Float, *>, direction: Float) {
+        offsetX.animateTo(direction * 400f, tween(300))
+        offsetX.snapTo(0f)
+    }
 
     LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            try {
-                val snapshot = FirebaseFirestore.getInstance().collection("users").get().await()
-                val allProfiles = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data
-                    if (doc.id != currentUserId && data != null) data + ("uid" to doc.id) else null
-                }
-                Log.d("ProfileDebug", "Loaded profiles: $allProfiles")
-                profiles.clear()
-                profiles.addAll(allProfiles)
-
-                isLoading.value = false
-            } catch (e: Exception) {
-                errorMessage.value = e.message
-                isLoading.value = false
-            }
-        }
+        homeViewModel.fetchHome()
     }
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
     Box(modifier = Modifier.fillMaxSize()) {
-        val profileIndex = remember { mutableStateOf(0) } // Add this line to define profileIndex state before using it
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(AppColors.MainBackground)
         ) {
             HomeHeader(navController)
-            if (isLoading.value) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp), contentAlignment = Alignment.Center) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (errorMessage.value != null) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp), contentAlignment = Alignment.Center) {
-                    Text("Error: ${errorMessage.value}", color = Color.Red)
+            } else if (errorMessage != null) {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Text("Error: $errorMessage", color = Color.Red)
                 }
             } else {
-                ProfileCard(profiles, profileIndex = profileIndex)
+                ProfileCard(
+                    profiles = profiles,
+                    profileIndex = profileIndex,
+                    handleProfileAction = ::handleProfileAction,
+                    animateSwipe = ::animateSwipe
+                )
                 ActionButtons(
                     profiles = profiles,
                     profileIndex = profileIndex,
-                    onLike = { /* handle like if needed */ },
-                    onDislike = { /* handle dislike if needed */ }
+                    handleProfileAction = ::handleProfileAction,
+                    animateSwipe = ::animateSwipe
                 )
             }
         }
@@ -136,10 +142,10 @@ fun HomeHeader(navController: NavController) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = { navController.popBackStack() }) {
+        IconButton(onClick = { navController.navigate("profile_details") }) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                imageVector = Icons.Default.Person,
+                contentDescription = "Profile",
                 tint = AppColors.Text_Pink
             )
         }
@@ -148,12 +154,12 @@ fun HomeHeader(navController: NavController) {
             text = "Discover",
             color = Color.Black,
             fontWeight = FontWeight.Bold,
-            fontSize = 24.sp
+            fontSize = 30.sp
         )
 
         IconButton(onClick = { navController.navigate("profile_details") }) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = Icons.Default.Settings,
                 contentDescription = "Profile",
                 tint = AppColors.Text_Pink
             )
@@ -165,8 +171,9 @@ fun HomeHeader(navController: NavController) {
 fun ProfileCard(
     profiles: List<Map<String, Any>>,
     profileIndex: MutableState<Int>,
-    onLike: (Map<String, Any>) -> Unit = {},
-    onDislike: (Map<String, Any>) -> Unit = {}
+    handleProfileAction: suspend (Boolean, MutableState<Int>, List<Map<String, Any>>, HomeViewModel) -> Unit,
+    animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
     val currentProfile = profiles.getOrNull(profileIndex.value)
 
@@ -253,18 +260,14 @@ fun ProfileCard(
                             scope.launch {
                                 when {
                                     offsetX.value > threshold -> {
-                                        onLike(currentProfile)
-                                        offsetX.animateTo(1000f, tween(350))
-                                        offsetX.snapTo(0f)
+                                        handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                                        animateSwipe(offsetX, 1f) // Pass direction explicitly
                                         offsetY.snapTo(0f)
-                                        profileIndex.value++
                                     }
                                     offsetX.value < -threshold -> {
-                                        onDislike(currentProfile)
-                                        offsetX.animateTo(-1000f, tween(350))
-                                        offsetX.snapTo(0f)
+                                        handleProfileAction(false, profileIndex, profiles, homeViewModel)
+                                        animateSwipe(offsetX, -1f) // Pass direction explicitly
                                         offsetY.snapTo(0f)
-                                        profileIndex.value++
                                     }
                                     else -> {
                                         offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
@@ -371,8 +374,9 @@ fun ProfileCard(
 fun ActionButtons(
     profiles: List<Map<String, Any>>,
     profileIndex: MutableState<Int>,
-    onLike: (Map<String, Any>) -> Unit = {},
-    onDislike: (Map<String, Any>) -> Unit = {}
+    handleProfileAction: suspend (Boolean, MutableState<Int>, List<Map<String, Any>>, HomeViewModel) -> Unit,
+    animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
@@ -392,18 +396,12 @@ fun ActionButtons(
             size = 75.dp,
             shadow = 8.dp
         ) {
-            val currentProfile = profiles.getOrNull(profileIndex.value)
-            if (currentProfile != null) {
-                onDislike(currentProfile)
-                // Animate swipe left
-                scope.launch {
-                    offsetX.animateTo(-400f, tween(300))
-                    offsetX.snapTo(0f)
-                        profileIndex.value++
-                }
+            scope.launch {
+                handleProfileAction(false, profileIndex, profiles, homeViewModel)
+                animateSwipe(offsetX, -1f) // Pass direction explicitly
             }
         }
-        // Like Button
+        // Super Like Button
         ActionButton(
             icon = Icons.Default.Favorite,
             background = AppColors.Text_Pink,
@@ -411,26 +409,24 @@ fun ActionButtons(
             size = 95.dp,
             shadow = 12.dp
         ) {
-            val currentProfile = profiles.getOrNull(profileIndex.value)
-            if (currentProfile != null) {
-                onLike(currentProfile)
-                // Animate swipe right
-                scope.launch {
-                    offsetX.animateTo(400f, tween(300))
-                    offsetX.snapTo(0f)
-                        profileIndex.value++
-
-                }
+            scope.launch {
+                handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                animateSwipe(offsetX, 1f) // Pass direction explicitly
             }
         }
-        // Super Like Button
+        // Like Button (calls a different method for clarity)
         ActionButton(
             icon = Icons.Default.Star,
             background = Color(0xFF4A154B),
             iconTint = Color.White,
             size = 75.dp,
             shadow = 8.dp
-        ) {}
+        ) {
+            scope.launch {
+                handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                animateSwipe(offsetX, 1f) // Pass direction explicitly
+            }
+        }
     }
 }
 
@@ -498,7 +494,7 @@ fun BottomNavigationBar(navController: NavController) {
             BottomNavIcon(
                 icon = Icons.Default.Favorite,
                 isActive = false
-            ) { /* TODO: Handle navigation */ }
+            ) { navController.navigate("favorite") }
             BottomNavIcon(
                 icon = Icons.Default.Chat,
                 isActive = false
