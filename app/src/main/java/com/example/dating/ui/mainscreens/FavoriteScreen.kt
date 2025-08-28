@@ -222,7 +222,7 @@ fun FavoriteBottomNavigationBar(navController: NavController) {
             BottomNavIcon(
                 icon = Icons.Default.ViewModule,
                 isActive = false
-            ) { navController.navigate("home") }
+            ) { navController.popBackStack()  }
             BottomNavIcon(
                 icon = Icons.Default.Favorite,
                 isActive = true

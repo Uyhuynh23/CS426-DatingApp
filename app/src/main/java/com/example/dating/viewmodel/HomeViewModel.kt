@@ -15,7 +15,7 @@ class HomeViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val matchRepository = MatchRepository()
     private val favoriteRepository = FavoriteRepository()
-
+   
     private val _profiles = MutableStateFlow<List<Map<String, Any>>>(emptyList())
     val profiles: StateFlow<List<Map<String, Any>>> = _profiles
 
@@ -68,5 +68,9 @@ class HomeViewModel : ViewModel() {
                 _errorMessage.value = e.message
             }
         }
+    }
+
+    fun resetMatchFoundUserId() {
+        _matchFoundUserId.value = null
     }
 }

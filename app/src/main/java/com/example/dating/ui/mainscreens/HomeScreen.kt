@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,12 +56,11 @@ import com.example.dating.viewmodel.HomeViewModel
 import androidx.compose.runtime.collectAsState
 
 @Composable
-fun HomeScreen(navController: NavController) {
-    val homeViewModel: HomeViewModel = viewModel()
+fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel) {
     val profiles by homeViewModel.profiles.collectAsState()
     val isLoading by homeViewModel.isLoading.collectAsState()
     val errorMessage by homeViewModel.errorMessage.collectAsState()
-    val profileIndex = remember { mutableStateOf(0) }
+    val profileIndex = rememberSaveable { mutableStateOf(0) }
 
     // Helper functions
     suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<Map<String, Any>>, homeViewModel: HomeViewModel, navController: NavController) {
@@ -85,8 +85,12 @@ fun HomeScreen(navController: NavController) {
         offsetX.snapTo(0f)
     }
 
+
+    // Only fetch profiles once when the composable is first composed
     LaunchedEffect(Unit) {
-        homeViewModel.fetchHome()
+        if (profiles.isEmpty()) {
+            homeViewModel.fetchHome()
+        }
     }
 
     // Observe matchFoundUserId and navigate if a match is found
@@ -94,6 +98,7 @@ fun HomeScreen(navController: NavController) {
     LaunchedEffect(matchFoundUserId) {
         if (matchFoundUserId != null) {
             navController.navigate("match/${matchFoundUserId}")
+            homeViewModel.resetMatchFoundUserId() // Add this function to your ViewModel
         }
     }
 
