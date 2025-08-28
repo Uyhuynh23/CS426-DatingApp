@@ -35,7 +35,7 @@ import androidx.compose.runtime.collectAsState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesScreen(viewModel: MessagesViewModel = hiltViewModel()) {
-    val messages by viewModel.messages.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFEEAFA))) {
         TopAppBar(title = { Text("Messages") }, actions = {
@@ -46,21 +46,52 @@ fun MessagesScreen(viewModel: MessagesViewModel = hiltViewModel()) {
 
         SearchBar()
 
-        Text("Activities", Modifier.padding(start = 16.dp, top = 8.dp), fontWeight = FontWeight.SemiBold)
-
-        LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
-            items(messages) {
-                StoryAvatar(it.peer)
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        }
+            uiState.error != null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(uiState.error ?: "Unknown error occurred", color = Color.Red)
+                }
+            }
+            uiState.messages.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No messages yet")
+                }
+            }
+            else -> {
+                Text("Activities", Modifier.padding(start = 16.dp, top = 8.dp), fontWeight = FontWeight.SemiBold)
 
-        Spacer(Modifier.height(8.dp))
+                LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    items(uiState.messages) {
+                        StoryAvatar(it.peer)
+                    }
+                }
 
-        Card(shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), modifier = Modifier.fillMaxSize()) {
-            LazyColumn {
-                items(messages) {
-                    MessageItem(it)
-                    Divider()
+                Spacer(Modifier.height(8.dp))
+
+                Card(
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LazyColumn {
+                        items(uiState.messages) {
+                            MessageItem(it)
+                            Divider()
+                        }
+                    }
                 }
             }
         }
