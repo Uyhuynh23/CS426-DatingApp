@@ -4,6 +4,8 @@ package com.example.dating.navigation
 import LoginScreen
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.dating.ui.onboarding.OnboardingScreen
@@ -22,12 +24,14 @@ import com.example.dating.ui.profile.SearchFriendScreen
 import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.ui.mainscreens.HomeScreen
 import com.example.dating.ui.profile.ProfileDetailsScreen
+import com.example.dating.ui.profile.UserProfileScreen
+import com.example.dating.ui.profile.PhotoViewerScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Register.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -86,6 +90,27 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         // Home
         composable(Screen.Home.route) {
             HomeScreen(navController)
+        }
+        // User Profile
+        composable(Screen.UserProfile.route) {
+            UserProfileScreen(navController = navController)
+        }
+
+        composable(
+            route = Screen.PhotoViewer.route,
+            arguments = listOf(navArgument("startIndex") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val startIndex = backStackEntry.arguments?.getInt("startIndex") ?: 0
+            val images: ArrayList<String> =
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<ArrayList<String>>("images") ?: arrayListOf()
+
+            PhotoViewerScreen(
+                navController = navController,
+                images = images,
+                startIndex = startIndex
+            )
         }
     }
 }
