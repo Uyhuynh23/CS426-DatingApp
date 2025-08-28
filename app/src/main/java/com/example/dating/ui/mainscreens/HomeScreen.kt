@@ -150,6 +150,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel) {
 
 @Composable
 fun HomeHeader(navController: NavController) {
+    val showFilterDialog = remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,13 +173,23 @@ fun HomeHeader(navController: NavController) {
             fontSize = 30.sp
         )
 
-        IconButton(onClick = { navController.navigate("profile_details") }) {
+        IconButton(onClick = { showFilterDialog.value = true }) {
             Icon(
                 imageVector = Icons.Default.Settings,
-                contentDescription = "Profile",
+                contentDescription = "Filter",
                 tint = AppColors.Text_Pink
             )
         }
+    }
+    if (showFilterDialog.value) {
+        com.example.dating.ui.components.FilterDialog(
+            show = showFilterDialog.value,
+            onDismiss = { showFilterDialog.value = false },
+            onApply = { selectedInterest, location, distance, ageRange ->
+                // TODO: Apply filter logic here
+                showFilterDialog.value = false
+            }
+        )
     }
 }
 
