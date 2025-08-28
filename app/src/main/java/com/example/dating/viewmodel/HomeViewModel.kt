@@ -2,7 +2,8 @@ package com.example.dating.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.Timestamp
+import com.example.dating.data.model.repository.FavoriteRepository
+import com.example.dating.data.model.repository.MatchRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,8 +13,8 @@ import kotlinx.coroutines.tasks.await
 
 class HomeViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
-    private val _addFavoriteState = MutableStateFlow<Result<Unit>?>(null)
-    val addFavoriteState: StateFlow<Result<Unit>?> = _addFavoriteState
+    private val matchRepository = MatchRepository()
+    private val favoriteRepository = FavoriteRepository()
 
     private val _profiles = MutableStateFlow<List<Map<String, Any>>>(emptyList())
     val profiles: StateFlow<List<Map<String, Any>>> = _profiles
@@ -24,31 +25,8 @@ class HomeViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
-    fun addFavorite(likedId: String) {
-        val likerId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val favorite = hashMapOf(
-            "likerId" to likerId,
-            "likedId" to likedId,
-            "timestamp" to Timestamp.now()
-        )
-        viewModelScope.launch {
-            try {
-                // Check for duplicate before adding
-                val query = db.collection("favorites")
-                    .whereEqualTo("likerId", likerId)
-                    .whereEqualTo("likedId", likedId)
-                    .get().await()
-                if (query.isEmpty) {
-                    db.collection("favorites").add(favorite)
-                    _addFavoriteState.value = Result.success(Unit)
-                } else {
-                    _addFavoriteState.value = Result.failure(Exception("Already liked"))
-                }
-            } catch (e: Exception) {
-                _addFavoriteState.value = Result.failure(e)
-            }
-        }
-    }
+    private val _matchFoundUserId = MutableStateFlow<String?>(null)
+    val matchFoundUserId: StateFlow<String?> = _matchFoundUserId
 
     fun fetchHome() {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
@@ -65,6 +43,29 @@ class HomeViewModel : ViewModel() {
             } catch (e: Exception) {
                 _errorMessage.value = e.message
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun likeProfile(likedId: String) {
+        val likerId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                // Add favorite using repository
+                favoriteRepository.addFavorite(likerId, likedId)
+                // Check for match using repository
+                val isMatch = favoriteRepository.isMatch(likerId, likedId)
+                if (isMatch) {
+                    _matchFoundUserId.value = likedId
+                    android.util.Log.d("HomeViewModel", "Calling MatchRepository.saveMatch with $likerId and $likedId")
+                    matchRepository.saveMatch(likerId, likedId, true)
+                } else {
+                    _matchFoundUserId.value = null
+                    android.util.Log.d("HomeViewModel", "Calling MatchRepository.saveMatch with $likerId and $likedId, status=false")
+                    matchRepository.saveMatch(likerId, likedId, false)
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
             }
         }
     }
