@@ -127,7 +127,7 @@ fun ProfileGrid(
     var showAll by remember { mutableStateOf(false) }
     val profilesToShow = if (showAll) profiles else profiles.take(6)
     val rowCount = if (showAll) (profilesToShow.size + 1) / 2 else 3
-    Column {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         for (row in 0 until rowCount) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
