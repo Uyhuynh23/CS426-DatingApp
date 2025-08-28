@@ -17,4 +17,9 @@ sealed class Screen(val route: String) {
     object Home : Screen("home") // để test sau
 
     object Messages : Screen("messages") // để test sau
+
+    object ChatDetail : Screen("chat_detail/{conversationId}") {
+        fun createRoute(conversationId: String) = "chat_detail/$conversationId"
+    }
+
 }

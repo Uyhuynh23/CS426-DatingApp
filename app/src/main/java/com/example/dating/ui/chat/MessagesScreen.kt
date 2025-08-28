@@ -2,6 +2,7 @@ package com.example.dating.ui.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -31,10 +33,19 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.collectAsState
+import com.example.dating.navigation.Screen
+import java.text.SimpleDateFormat
+import java.util.*
+import androidx.navigation.NavController
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessagesScreen(viewModel: MessagesViewModel = hiltViewModel()) {
+fun MessagesScreen(
+    navController: NavController,
+    viewModel: MessagesViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFEEAFA))) {
@@ -87,8 +98,15 @@ fun MessagesScreen(viewModel: MessagesViewModel = hiltViewModel()) {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     LazyColumn {
-                        items(uiState.messages) {
-                            MessageItem(it)
+                        items(uiState.messages) { conversation ->
+                            MessageItem(
+                                item = conversation,
+                                onClick = {
+                                    navController.navigate(
+                                        Screen.ChatDetail.createRoute(conversation.id)
+                                    )
+                                }
+                            )
                             Divider()
                         }
                     }
@@ -134,32 +152,48 @@ fun StoryAvatar(user: User) {
 }
 
 @Composable
-fun MessageItem(item: ConversationPreview) {
+fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = item.peer.avatarUrl ?: "https://i.pravatar.cc/150?u=${item.peer.uid}",
             contentDescription = null,
-            modifier = Modifier.size(56.dp).clip(CircleShape)
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
         )
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(item.peer.firstName, fontWeight = FontWeight.Bold)
+
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+        ) {
             Text(
-                if (item.isTyping) "Typing..." else item.lastMessage,
-                fontSize = 14.sp,
-                color = if (item.isTyping) Color.Magenta else Color.Gray
+                text = "${item.peer.firstName} ${item.peer.lastName}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (item.lastMessage.isNotEmpty()) item.lastMessage else "No messages yet",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(item.timeAgo, fontSize = 12.sp, color = Color.Gray)
-            if (item.unreadCount > 0) {
-                Badge { Text("${item.unreadCount}") }
-            }
+
+        if (item.timeAgo.isNotEmpty()) {
+            Text(
+                text = item.timeAgo,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
         }
     }
 }

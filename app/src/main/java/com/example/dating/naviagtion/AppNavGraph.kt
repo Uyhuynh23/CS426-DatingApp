@@ -1,4 +1,3 @@
-
 package com.example.dating.navigation
 
 import LoginScreen
@@ -24,6 +23,10 @@ import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.ui.mainscreens.HomeScreen
 import com.example.dating.ui.profile.ProfileDetailsScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.dating.ui.chat.ChatDetailScreen
+
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
@@ -93,9 +96,21 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         }
 
         composable(Screen.Messages.route) {
-            MessagesScreen(viewModel = messageViewModel)
+            MessagesScreen(navController, viewModel = messageViewModel)
         }
+
+        composable(
+            route = Screen.ChatDetail.route,
+            arguments = listOf(
+                navArgument("conversationId") {
+                    type = NavType.StringType
+                    nullable = false
+                }
+            )
+        ) { backStackEntry ->
+            val conversationId = backStackEntry.arguments?.getString("conversationId")!!
+            ChatDetailScreen(conversationId = conversationId, navController = navController)
+        }
+
     }
 }
-
-

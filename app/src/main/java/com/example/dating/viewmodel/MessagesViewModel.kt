@@ -67,6 +67,7 @@ class MessagesViewModel @Inject constructor(
 
             val fakeMessages = listOf(
                 ConversationPreview(
+                    id = "conv1",
                     peer = fakeUsers[0],
                     lastMessage = "Seven billion people in the world~🎵",
                     timeAgo = "2m",
@@ -74,6 +75,7 @@ class MessagesViewModel @Inject constructor(
                     isTyping = false
                 ),
                 ConversationPreview(
+                    id = "conv2",
                     peer = fakeUsers[1],
                     lastMessage = "Born Pink World Tour! 🎤",
                     timeAgo = "15m",
@@ -81,6 +83,7 @@ class MessagesViewModel @Inject constructor(
                     isTyping = true
                 ),
                 ConversationPreview(
+                    id = "conv3",
                     peer = fakeUsers[2],
                     lastMessage = "Flower MV hit 500M views! 🌸",
                     timeAgo = "1h",
@@ -88,6 +91,7 @@ class MessagesViewModel @Inject constructor(
                     isTyping = false
                 ),
                 ConversationPreview(
+                    id = "conv4",
                     peer = fakeUsers[3],
                     lastMessage = "Super Shy~ Super Shy~ 🎵",
                     timeAgo = "2h",
@@ -95,6 +99,7 @@ class MessagesViewModel @Inject constructor(
                     isTyping = false
                 ),
                 ConversationPreview(
+                    id = "conv5",
                     peer = fakeUsers[4],
                     lastMessage = "Celebrity new album! ⭐",
                     timeAgo = "1d",
