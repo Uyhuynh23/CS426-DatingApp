@@ -15,4 +15,9 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object ProfileDetails : Screen("profile_details") // để test sau
     object Home : Screen("home") // để test sau
+    object UserProfile: Screen("user_profile")
+
+    object PhotoViewer: Screen("photo_viewer/{startIndex}") {
+        fun route(startIndex: Int) = "photo_viewer/$startIndex"
+    }
 }

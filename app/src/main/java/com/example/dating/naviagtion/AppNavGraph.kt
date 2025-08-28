@@ -1,27 +1,18 @@
-
 package com.example.dating.navigation
 
 import LoginScreen
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.dating.ui.onboarding.OnboardingScreen
-import androidx.compose.material3.Text
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.dating.ui.auth.SignUpScreen
-import com.example.dating.ui.auth.PhoneNumberScreen
-import com.example.dating.ui.auth.VerifyCodeScreen
-import com.example.dating.ui.auth.VerifyEmailScreen
-import com.example.dating.ui.auth.EmailScreen
-import com.example.dating.ui.profile.GenderSelectionScreen
-import com.example.dating.ui.profile.InterestSelectionScreen
-import com.example.dating.ui.profile.EnableNotificationScreen
-import com.example.dating.ui.profile.ProfileScreen
-import com.example.dating.ui.profile.SearchFriendScreen
+import com.example.dating.ui.auth.*
+import com.example.dating.ui.profile.*
 import com.example.dating.viewmodel.AuthViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.ui.mainscreens.HomeScreen
-import com.example.dating.ui.profile.ProfileDetailsScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
@@ -87,6 +78,30 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         composable(Screen.Home.route) {
             HomeScreen(navController)
         }
+
+        // User Profile
+        composable(Screen.UserProfile.route) {
+            UserProfileScreen(navController = navController)
+        }
+
+        composable(
+            route = Screen.PhotoViewer.route,
+            arguments = listOf(navArgument("startIndex") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val startIndex = backStackEntry.arguments?.getInt("startIndex") ?: 0
+            val images: ArrayList<String> =
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<ArrayList<String>>("images") ?: arrayListOf()
+
+            PhotoViewerScreen(
+                navController = navController,
+                images = images,
+                startIndex = startIndex
+            )
+        }
+
+
     }
 }
 
