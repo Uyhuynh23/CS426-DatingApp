@@ -31,17 +31,18 @@ import java.util.*
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.R
 import androidx.compose.ui.res.painterResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.viewmodel.ProfileViewModel
-
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.dating.data.model.User
 @Composable
-fun ProfileScreen(navController: NavController) {
-    var firstName by remember { mutableStateOf("David") }
-    var lastName by remember { mutableStateOf("Peterson") }
-    var birthday by remember { mutableStateOf<Date?>(null) }
+fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hiltViewModel()) {
+    val userState by viewModel.user.collectAsState()
+
+    var firstName by remember { mutableStateOf(userState?.firstName ?: "") }
+    var lastName by remember { mutableStateOf(userState?.lastName ?: "") }
+    var birthday by remember { mutableStateOf(userState?.birthday?.let { SimpleDateFormat("yyyy-MM-dd").parse(it) } ?: null) }
     var selectedImageUrl by remember { mutableStateOf<android.net.Uri?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
-    val profileViewModel: ProfileViewModel = viewModel()
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
@@ -226,20 +227,19 @@ fun ProfileScreen(navController: NavController) {
             onClick = {
                 isSaving = true
                 saveError = null
-                profileViewModel.saveProfile(
+                val user = viewModel.user.value?.copy(
                     firstName = firstName,
                     lastName = lastName,
                     birthday = birthday?.let { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it) },
-                    imageUrl = selectedImageUrl?.toString(),
-                    onSuccess = {
-                        isSaving = false
-                        navController.navigate("gender_select")
-                    },
-                    onFailure = { e ->
-                        isSaving = false
-                        saveError = e.message
-                    }
+                ) ?: User(
+                    uid = "", // Set the correct uid if available
+                    firstName = firstName,
+                    lastName = lastName,
+                    birthday = birthday?.let { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it) }
                 )
+                viewModel.updateProfile(user)
+                isSaving = false
+                navController.navigate("gender_select")
             },
             enabled = firstName.isNotBlank() && lastName.isNotBlank() && birthday != null && !isSaving,
             modifier = Modifier

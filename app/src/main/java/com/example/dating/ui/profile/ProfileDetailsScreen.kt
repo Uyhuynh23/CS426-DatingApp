@@ -1,7 +1,5 @@
 package com.example.dating.ui.profile
 
-import android.util.Log
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,69 +16,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.dating.R
 import com.example.dating.ui.components.CustomCalendarDialog
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.ProfileViewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.snapshots.SnapshotStateList
-
-// Assuming Interest data class structure
+import com.example.dating.data.model.User
+import com.example.dating.data.model.Resource
+import com.example.dating.data.model.Interest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDetailsScreen(
     navController: NavController,
-    profileViewModel: ProfileViewModel = viewModel()
+    profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
-    var isLoading by remember { mutableStateOf(true) }
-    var profile by remember { mutableStateOf<Map<String, Any>?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        isLoading = true
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
-        if (userId == null) {
-            errorMessage = "User not logged in."
-            isLoading = false
-            return@LaunchedEffect
-        }
-        try {
-            val doc = FirebaseFirestore.getInstance().collection("users").document(userId).get().await()
-            if (doc.exists()) {
-                profile = doc.data
-            } else {
-                errorMessage = "Profile not found."
-            }
-        } catch (e: Exception) {
-            errorMessage = "Failed to load profile: ${e.message}"
-        }
-        isLoading = false
-    }
+    val user by profileViewModel.user.collectAsState()
+    val updateState by profileViewModel.updateState.collectAsState()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        when {
-            isLoading -> {
+        when (updateState) {
+            is Resource.Loading -> {
                 Surface(
                     color = Color.White.copy(alpha = 0.9f),
                     shape = MaterialTheme.shapes.medium,
@@ -90,7 +59,8 @@ fun ProfileDetailsScreen(
                     CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                 }
             }
-            errorMessage != null -> {
+            is Resource.Failure -> {
+                val exception = (updateState as Resource.Failure).exception
                 Surface(
                     color = Color.White.copy(alpha = 0.95f),
                     shape = MaterialTheme.shapes.medium,
@@ -98,7 +68,7 @@ fun ProfileDetailsScreen(
                     modifier = Modifier.align(Alignment.Center).padding(16.dp)
                 ) {
                     Text(
-                        text = errorMessage ?: "An unknown error occurred.",
+                        text = exception.localizedMessage ?: "Update failed.",
                         color = Color.Red,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -106,12 +76,14 @@ fun ProfileDetailsScreen(
                     )
                 }
             }
-            profile != null -> {
-                ProfileContent(
-                    navController = navController,
-                    initialProfile = profile!!,
-                    profileViewModel = profileViewModel
-                )
+            else -> {
+                user?.let {
+                    ProfileContent(
+                        navController = navController,
+                        initialProfile = it,
+                        profileViewModel = profileViewModel
+                    )
+                }
             }
         }
     }
@@ -120,22 +92,22 @@ fun ProfileDetailsScreen(
 @Composable
 fun ProfileContent(
     navController: NavController,
-    initialProfile: Map<String, Any>,
+    initialProfile: User, // Change type to User
     profileViewModel: ProfileViewModel
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
 
-    var editableFirstName by remember { mutableStateOf(initialProfile["firstName"]?.toString() ?: "") }
-    var editableLastName by remember { mutableStateOf(initialProfile["lastName"]?.toString() ?: "") }
-    var editableBirthday by remember { mutableStateOf(initialProfile["birthday"]?.toString() ?: "") }
-    var editableGender by remember { mutableStateOf(initialProfile["gender"]?.toString() ?: "") }
-    var editableJob by remember { mutableStateOf(initialProfile["job"]?.toString() ?: "") }
-    var editableLocation by remember { mutableStateOf(initialProfile["location"]?.toString() ?: "") }
-    var editableDescription by remember { mutableStateOf(initialProfile["description"]?.toString() ?: "") }
+    var editableFirstName by remember { mutableStateOf(initialProfile.firstName) }
+    var editableLastName by remember { mutableStateOf(initialProfile.lastName) }
+    var editableBirthday by remember { mutableStateOf(initialProfile.birthday ?: "") }
+    var editableGender by remember { mutableStateOf(initialProfile.gender ?: "") }
+    var editableJob by remember { mutableStateOf(initialProfile.job ?: "") }
+    var editableLocation by remember { mutableStateOf(initialProfile.location ?: "") }
+    var editableDescription by remember { mutableStateOf(initialProfile.description ?: "") }
 
     val selectedInterests = remember {
-        ((initialProfile["interests"] as? List<*>)?.map { it.toString() } ?: emptyList()).toMutableStateList()
+        initialProfile.interests.toMutableStateList()
     }
 
     var isSaving by remember { mutableStateOf(false) }
@@ -172,38 +144,29 @@ fun ProfileContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { navController.navigateUp() }) {
+                IconButton(onClick = { navController.popBackStack() }) {
                     Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink)
                 }
                 TextButton(onClick = {
                     if (isEditMode) {
                         isSaving = true
                         saveError = null
-                        profileViewModel.saveProfile(
-                            editableFirstName, editableLastName, editableBirthday,
-                            initialProfile["imageUrl"] as? String,
-                            onSuccess = {
-                                profileViewModel.updateGender(editableGender,
-                                    onSuccess = {
-                                        profileViewModel.updateInterests(selectedInterests,
-                                            onSuccess = {
-                                                profileViewModel.updateJobLocationDescription(
-                                                    editableJob, editableLocation, editableDescription,
-                                                    onSuccess = {
-                                                        isSaving = false
-                                                        isEditMode = false
-                                                    },
-                                                    onFailure = { e -> isSaving = false; saveError = e.message }
-                                                )
-                                            },
-                                            onFailure = { e -> isSaving = false; saveError = e.message }
-                                        )
-                                    },
-                                    onFailure = { e -> isSaving = false; saveError = e.message }
-                                )
-                            },
-                            onFailure = { e -> isSaving = false; saveError = e.message }
+                        val user = User(
+                            uid = initialProfile.uid,
+                            firstName = editableFirstName,
+                            lastName = editableLastName,
+                            birthday = editableBirthday,
+                            imageUrl = initialProfile.imageUrl,
+                            avatarUrl = initialProfile.avatarUrl,
+                            gender = editableGender,
+                            job = editableJob,
+                            location = editableLocation,
+                            description = editableDescription,
+                            interests = selectedInterests.toList()
                         )
+                        profileViewModel.updateProfile(user)
+                        isSaving = false
+                        isEditMode = false
                     } else {
                         isEditMode = true
                     }
@@ -234,7 +197,7 @@ fun ProfileContent(
 
         // Profile Image
         item {
-            val imageUrl = initialProfile["imageUrl"] as? String
+            val imageUrl = initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()
             val imageModifier = Modifier.size(170.dp).padding(vertical = 8.dp)
             if (!imageUrl.isNullOrBlank()) {
                 Image(

@@ -1,4 +1,6 @@
 package com.example.dating.data.model
 
-class Interest {
-}
+data class Interest(
+    val name: String,
+    val icon: Int
+)

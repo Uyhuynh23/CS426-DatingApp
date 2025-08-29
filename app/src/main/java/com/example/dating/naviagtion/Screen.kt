@@ -15,6 +15,10 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object ProfileDetails : Screen("profile_details") // để test sau
     object Home : Screen("home") // để test sau
+    object Favorite : Screen("favorite") // để test sau
+    object Match : Screen("match") // để test sau
+
+
 
     object Messages : Screen("messages") // để test sau
 

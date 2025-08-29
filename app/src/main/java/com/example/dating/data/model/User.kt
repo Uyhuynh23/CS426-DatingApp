@@ -11,5 +11,6 @@ data class User(
     val job: String? = null,
     val location: String? = null,
     val description: String? = null,
-    val interests: List<String> = emptyList()
+    val interests: List<String> = emptyList(),
+    val distance: Int? = null
 )

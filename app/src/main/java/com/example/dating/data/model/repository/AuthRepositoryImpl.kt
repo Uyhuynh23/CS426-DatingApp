@@ -19,6 +19,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth
 ) : AuthRepository {
 
+
     override val currentUser: FirebaseUser?
         get() = firebaseAuth.currentUser
 
