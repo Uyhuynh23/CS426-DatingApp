@@ -51,12 +51,14 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.util.lerp
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.material3.Scaffold
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.viewmodel.HomeViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.User
+import com.example.dating.ui.components.BottomNavigationBar
 
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
@@ -115,53 +117,101 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
 
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(navController, 0)
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .background(AppColors.MainBackground)
         ) {
             HomeHeader(navController)
+
             when (uidResource) {
                 is Resource.Loading -> {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 }
+
                 is Resource.Failure -> {
                     val error = (uidResource as Resource.Failure).exception?.message ?: "Unknown error"
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text("Error: $error", color = Color.Red)
                     }
                 }
+
                 is Resource.Success -> {
                     when (usersResource) {
                         is Resource.Loading -> {
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CircularProgressIndicator()
                             }
                         }
+
                         is Resource.Failure -> {
                             val error = (usersResource as Resource.Failure).exception?.message ?: "Unknown error"
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text("Error: $error", color = Color.Red)
                             }
                         }
+
                         is Resource.Success -> {
                             val profiles = (usersResource as Resource.Success<List<User>>).result
-                            ProfileCard(
-                                profiles = profiles,
-                                profileIndex = profileIndex,
-                                handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                                    handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
-                                },
-                                animateSwipe = ::animateSwipe
-                            )
+
+                            // Chiếm phần còn lại của màn hình
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProfileCard(
+                                    profiles = profiles,
+                                    profileIndex = profileIndex,
+                                    handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                                        handleProfileAction(
+                                            isLike,
+                                            profileIndex,
+                                            profiles,
+                                            homeViewModel,
+                                            navController
+                                        )
+                                    },
+                                    animateSwipe = ::animateSwipe
+                                )
+                            }
+
+                            // Đặt dưới cùng, không bị che
                             ActionButtons(
                                 profiles = profiles,
                                 profileIndex = profileIndex,
                                 handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                                    handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
+                                    handleProfileAction(
+                                        isLike,
+                                        profileIndex,
+                                        profiles,
+                                        homeViewModel,
+                                        navController
+                                    )
                                 },
                                 animateSwipe = ::animateSwipe
                             )
@@ -170,15 +220,8 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                 }
             }
         }
-        // Fixed BottomNavigationBar
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            BottomNavigationBar(navController)
-        }
     }
+
 }
 
 @Composable
@@ -319,18 +362,36 @@ fun ProfileCard(
                             scope.launch {
                                 when {
                                     offsetX.value > threshold -> {
-                                        handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                                        handleProfileAction(
+                                            true,
+                                            profileIndex,
+                                            profiles,
+                                            homeViewModel
+                                        )
                                         animateSwipe(offsetX, 1f) // Pass direction explicitly
                                         offsetY.snapTo(0f)
                                     }
+
                                     offsetX.value < -threshold -> {
-                                        handleProfileAction(false, profileIndex, profiles, homeViewModel)
+                                        handleProfileAction(
+                                            false,
+                                            profileIndex,
+                                            profiles,
+                                            homeViewModel
+                                        )
                                         animateSwipe(offsetX, -1f) // Pass direction explicitly
                                         offsetY.snapTo(0f)
                                     }
+
                                     else -> {
-                                        offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
-                                        offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                        offsetX.animateTo(
+                                            0f,
+                                            spring(stiffness = Spring.StiffnessMedium)
+                                        )
+                                        offsetY.animateTo(
+                                            0f,
+                                            spring(stiffness = Spring.StiffnessMedium)
+                                        )
                                     }
                                 }
                             }
@@ -516,52 +577,3 @@ fun ActionButton(
     }
 }
 
-@Composable
-fun BottomNavIcon(
-    icon: ImageVector,
-    isActive: Boolean,
-    onClick: () -> Unit
-) {
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isActive) AppColors.Text_Pink else Color(0xFFBDBDBD),
-            modifier = Modifier.size(32.dp)
-        )
-    }
-}
-
-@Composable
-fun BottomNavigationBar(navController: NavController) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(103.dp)
-            .background(Color.White.copy(alpha = 1.0f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            BottomNavIcon(
-                icon = Icons.Default.ViewModule,
-                isActive = true
-            ) { /* TODO: Handle navigation */ }
-            BottomNavIcon(
-                icon = Icons.Default.Favorite,
-                isActive = false
-            ) { navController.navigate("favorite") }
-            BottomNavIcon(
-                icon = Icons.Default.Chat,
-                isActive = false
-            ) { /* TODO: Handle navigation */ }
-            BottomNavIcon(
-                icon = Icons.Default.Person,
-                isActive = false
-            ) { /* TODO: Handle navigation */ }
-        }
-    }
-}
