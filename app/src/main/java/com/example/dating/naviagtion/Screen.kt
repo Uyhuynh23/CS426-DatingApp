@@ -21,4 +21,9 @@ sealed class Screen(val route: String) {
 
 
     object Messages : Screen("messages") // để test sau
+
+    object ChatDetail : Screen("chat_detail/{conversationId}") {
+        fun createRoute(conversationId: String) = "chat_detail/$conversationId"
+    }
+
 }

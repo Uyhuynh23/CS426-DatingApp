@@ -28,6 +28,10 @@ import com.example.dating.ui.profile.ProfileDetailsScreen
 import com.example.dating.viewmodel.HomeViewModel
 import com.example.dating.viewmodel.FavoriteViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.dating.ui.chat.ChatDetailScreen
+
 import androidx.navigation.compose.navigation
 import com.example.dating.viewmodel.ProfileViewModel
 
@@ -105,6 +109,8 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 HomeScreen(navController, homeViewModel)
             }
 
+        composable(Screen.Messages.route) {
+            MessagesScreen(navController, viewModel = messageViewModel)
             // Favorite
             composable(Screen.Favorite.route) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
@@ -131,5 +137,19 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 MessagesScreen(viewModel = messageViewModel)
             }
         }
+
+        composable(
+            route = Screen.ChatDetail.route,
+            arguments = listOf(
+                navArgument("conversationId") {
+                    type = NavType.StringType
+                    nullable = false
+                }
+            )
+        ) { backStackEntry ->
+            val conversationId = backStackEntry.arguments?.getString("conversationId")!!
+            ChatDetailScreen(conversationId = conversationId, navController = navController)
+        }
+
     }
 }
