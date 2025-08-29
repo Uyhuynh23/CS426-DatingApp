@@ -91,4 +91,15 @@ class ProfileViewModel @Inject constructor(
             _user.value = updatedUser
         }
     }
+
+    fun createUser(user: User) {
+        viewModelScope.launch {
+            _updateState.value = Resource.Loading
+            val result = userRepository.createUser(user)
+            _updateState.value = result
+            if (result is Resource.Success) {
+                _user.value = user
+            }
+        }
+    }
 }

@@ -25,17 +25,22 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.dating.viewmodel.ProfileViewModel
 
 @Composable
-fun EmailScreen(navController: NavController) {
+fun EmailScreen(
+    navController: NavController,
+    onUserCreated: ((String) -> Unit)? = null
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val authViewModel: AuthViewModel = hiltViewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     val coroutineScope = rememberCoroutineScope()
-    val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
     var isEmailFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
@@ -139,6 +144,11 @@ fun EmailScreen(navController: NavController) {
                         isLoading = false
                         if (signupResult == null) {
                             errorMessage = "Verification email sent. Please check your inbox."
+                            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                            if (uid != null) {
+                                val newUser = com.example.dating.data.model.User(uid = uid)
+                                profileViewModel.createUser(newUser)
+                            }
                             startVerificationCheck = true
                         } else {
                             errorMessage = signupResult

@@ -78,4 +78,13 @@ class UserRepository @Inject constructor(
         // TODO: Implement Firebase Storage upload and return the URL
         return ""
     }
+
+    suspend fun createUser(user: User): Resource<Unit> {
+        return try {
+            firestore.collection("users").document(user.uid).set(user).await()
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Failure(e)
+        }
+    }
 }

@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
+import com.example.dating.data.model.Interest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
