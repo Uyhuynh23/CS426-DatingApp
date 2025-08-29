@@ -28,17 +28,14 @@ import com.example.dating.ui.theme.AppColors
 import androidx.navigation.NavController
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import com.example.dating.data.model.User
+import com.example.dating.data.model.Resource
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun FavoriteScreen(navController: NavController) {
-    val favoriteViewModel: FavoriteViewModel = viewModel()
-    val likedMeProfiles by favoriteViewModel.likedMeProfiles.collectAsState()
-    val isLoading by favoriteViewModel.isLoading.collectAsState()
-    val errorMessage by favoriteViewModel.errorMessage.collectAsState()
+fun FavoriteScreen(navController: NavController, favoriteViewModel: FavoriteViewModel = hiltViewModel()) {
+    val usersState by favoriteViewModel.usersState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        favoriteViewModel.fetchFavorites()
-    }
 
     Box(
         modifier = Modifier
@@ -51,23 +48,35 @@ fun FavoriteScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState())
         ) {
             FavoriteHeader(navController)
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when (usersState) {
+                is Resource.Loading -> {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else if (errorMessage != null) {
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                    Text("Error: $errorMessage", color = Color.Red)
+                is Resource.Failure -> {
+                    val error = (usersState as Resource.Failure).exception?.message ?: "Unknown error"
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text("Error: $error", color = Color.Red)
+                    }
                 }
-            } else {
-                Text("This is a list of people who have liked you.", fontSize = 16.sp, modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp, end = 16.dp), color = Color.Black)
-                ProfileGrid(
-                    profiles = likedMeProfiles,
-                    navController = navController,
-                    showDelete = false,
-                    moreAvailable = likedMeProfiles.size >= 9,
-                    onMoreClick = { /* TODO: Show all likedMeProfiles */ }
-                )
+                is Resource.Success -> {
+                    val users = (usersState as Resource.Success<List<User>>).result
+                    if (users.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Text("No users found", color = Color.Gray)
+                        }
+                    } else {
+                        Text("This is a list of people who have liked you.", fontSize = 16.sp, modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp, end = 16.dp), color = Color.Black)
+                        ProfileGrid(
+                            profiles = users,
+                            navController = navController,
+                            showDelete = false,
+                            moreAvailable = users.size >= 9,
+                            onMoreClick = { /* TODO: Show all likedMeProfiles */ }
+                        )
+                    }
+                }
             }
         }
         Box(
@@ -117,11 +126,11 @@ fun FavoriteHeader(navController: NavController) {
 
 @Composable
 fun ProfileGrid(
-    profiles: List<Map<String, Any>>,
+    profiles: List<User>,
     navController: NavController,
     showDelete: Boolean,
     moreAvailable: Boolean,
-    onDelete: ((Map<String, Any>) -> Unit)? = null,
+    onDelete: ((User) -> Unit)? = null,
     onMoreClick: () -> Unit
 ) {
     var showAll by remember { mutableStateOf(false) }
@@ -145,7 +154,7 @@ fun ProfileGrid(
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(Color(0xFF23222B))
                                 .clickable {
-                                    navController.navigate("profile_display/${profile["uid"]}")
+                                    navController.navigate("profile_display/${profile.uid}")
                                 }
                         ) {
                             // Profile image placeholder
@@ -159,10 +168,8 @@ fun ProfileGrid(
                                     .background(Color.Gray)
                             )
                             // Name, Age, Description
-                            val firstName = profile["firstName"] as? String ?: ""
-                            val lastName = profile["lastName"] as? String ?: ""
-                            val name = (firstName + " " + lastName).trim().ifEmpty { "Unknown" }
-                            val birthday = profile["birthday"] as? String
+                            val name = (profile.firstName + " " + profile.lastName).trim().ifEmpty { "Unknown" }
+                            val birthday = profile.birthday
                             val age = birthday?.let {
                                 try {
                                     val year = it.split("/").getOrNull(2)?.toInt() ?: throw Exception("Invalid date")
