@@ -2,82 +2,93 @@ package com.example.dating.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.example.dating.data.model.User
+import com.example.dating.data.model.repository.AuthRepository
+import com.example.dating.data.model.repository.UserRepository
+import com.example.dating.data.model.Resource
 
-class ProfileViewModel : ViewModel() {
-    private val firestore = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
+    private val userRepository: UserRepository,
+    private val auth: AuthRepository,
+    ) : ViewModel() {
+    private val _user = MutableStateFlow<User?>(null)
+    val user: StateFlow<User?> = _user
 
-    fun saveProfile(
-        firstName: String,
-        lastName: String,
-        birthday: String?,
-        imageUrl: String?,
-        onSuccess: () -> Unit,
-        onFailure: (Exception) -> Unit
-    ) {
-        val userId = auth.currentUser?.uid ?: return
-        val userMap = hashMapOf(
-            "firstName" to firstName,
-            "lastName" to lastName,
-            "birthday" to birthday,
-            "imageUrl" to imageUrl
-        )
-        viewModelScope.launch {
-            firestore.collection("users").document(userId)
-                .set(userMap)
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onFailure(e) }
+    private val _updateState = MutableStateFlow<Resource<Unit>?>(null)
+    val updateState: StateFlow<Resource<Unit>?> = _updateState
+
+    init {
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            viewModelScope.launch {
+                userRepository.getUser(uid).collect { fetchedUser ->
+                    android.util.Log.d("ProfileViewModel", "Fetched user: $fetchedUser")
+                    _user.value = fetchedUser
+                }
+            }
+        } else {
+            android.util.Log.w("ProfileViewModel", "No UID found in AuthRepository")
         }
     }
 
-    fun updateGender(
-        gender: String,
-        onSuccess: () -> Unit,
-        onFailure: (Exception) -> Unit
-    ) {
-        val userId = auth.currentUser?.uid ?: return
+    fun loadUser(uid: String) {
         viewModelScope.launch {
-            firestore.collection("users").document(userId)
-                .update("gender", gender)
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onFailure(e) }
+            userRepository.getUser(uid).collect { _user.value = it }
         }
     }
 
-    fun updateInterests(
-        interests: List<String>,
-        onSuccess: () -> Unit,
-        onFailure: (Exception) -> Unit
-    ) {
-        val userId = auth.currentUser?.uid ?: return
+    fun updateProfile(user: User) {
+        android.util.Log.d("ProfileViewModel", "updateProfile called with: $user")
         viewModelScope.launch {
-            firestore.collection("users").document(userId)
-                .update("interests", interests)
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onFailure(e) }
+            _updateState.value = Resource.Loading
+            val result = userRepository.updateUser(user)
+            _updateState.value = result
+            if (result is Resource.Success) {
+                _user.value = user
+            }
         }
     }
 
-    fun updateJobLocationDescription(
-        job: String?,
-        location: String?,
-        description: String?,
-        onSuccess: () -> Unit,
-        onFailure: (Exception) -> Unit
-    ) {
-        val userId = auth.currentUser?.uid ?: return
+    fun updateGender(gender: String) {
+        val currentUser = _user.value ?: return
+        val updatedUser = currentUser.copy(gender = gender)
         viewModelScope.launch {
-            firestore.collection("users").document(userId)
-                .update(mapOf(
-                    "job" to job,
-                    "location" to location,
-                    "description" to description
-                ))
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onFailure(e) }
+            _updateState.value = Resource.Loading
+            val result = userRepository.updateGender(updatedUser.uid, gender)
+            _updateState.value = result
+            if (result is Resource.Success) {
+                _user.value = updatedUser
+            }
+        }
+    }
+
+    fun updateInterests(interests: List<String>) {
+        val currentUser = _user.value ?: return
+        val updatedUser = currentUser.copy(interests = interests)
+        android.util.Log.w("ProfileViewModel", currentUser.toString())
+
+        viewModelScope.launch {
+            _updateState.value = Resource.Loading
+            val result = userRepository.updateInterests(updatedUser.uid, interests)
+            _updateState.value = result
+            if (result is Resource.Success) {
+                _user.value = updatedUser
+            }
+        }
+    }
+
+    fun updateJobLocationDescription(job: String?, location: String?, description: String?) {
+        val currentUser = _user.value ?: return
+        val updatedUser = currentUser.copy(job = job, location = location, description = description)
+        viewModelScope.launch {
+            userRepository.updateJobLocationDescription(updatedUser.uid, job, location, description)
+            _user.value = updatedUser
         }
     }
 }

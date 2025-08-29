@@ -19,16 +19,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.ui.theme.AppColors
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.viewmodel.ProfileViewModel
 
 
 @Composable
 fun GenderSelectionScreen(navController: NavController) {
     var selectedGender by remember { mutableStateOf("Man") }
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
+
+    // Observe user state for navigation after update
+    val userState by profileViewModel.user.collectAsState()
+
+    // Load user when screen is shown
+    LaunchedEffect(Unit) {
+        val userId = userState?.uid
+        if (userId != null && userState == null) {
+            profileViewModel.loadUser(userId)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -113,17 +124,9 @@ fun GenderSelectionScreen(navController: NavController) {
             onClick = {
                 isSaving = true
                 saveError = null
-                profileViewModel.updateGender(
-                    gender = selectedGender,
-                    onSuccess = {
-                        isSaving = false
-                        navController.navigate("interest_select")
-                    },
-                    onFailure = { e ->
-                        isSaving = false
-                        saveError = e.message
-                    }
-                )
+                profileViewModel.updateGender(selectedGender)
+                isSaving = false
+                navController.navigate("interest_select")
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),

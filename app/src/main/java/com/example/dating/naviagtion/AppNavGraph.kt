@@ -33,7 +33,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
     val messageViewModel = hiltViewModel<com.example.dating.viewmodel.MessagesViewModel>()
     NavHost(
         navController = navController,
-        startDestination = Screen.Messages.route
+        startDestination = Screen.Login.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {

@@ -23,7 +23,7 @@ import androidx.navigation.NavController
 import com.example.dating.R
 import com.example.dating.ui.theme.AppColors
 import androidx.compose.ui.text.style.TextAlign
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.viewmodel.ProfileViewModel
 
 data class Interest(
@@ -51,9 +51,12 @@ fun InterestSelectionScreen(navController: NavController) {
     )
 
     val selectedInterests = remember { mutableStateListOf<String>() }
-    val profileViewModel: ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
+
+    // Observe user state for navigation after update
+    val userState by profileViewModel.user.collectAsState()
 
     Column(
         modifier = Modifier
@@ -144,17 +147,9 @@ fun InterestSelectionScreen(navController: NavController) {
             onClick = {
                 isSaving = true
                 saveError = null
-                profileViewModel.updateInterests(
-                    interests = selectedInterests.toList(),
-                    onSuccess = {
-                        isSaving = false
-                        navController.navigate("search_friend")
-                    },
-                    onFailure = { e ->
-                        isSaving = false
-                        saveError = e.message
-                    }
-                )
+                profileViewModel.updateInterests(selectedInterests.toList())
+                isSaving = false
+                navController.navigate("search_friend")
             },
             enabled = selectedInterests.isNotEmpty() && !isSaving,
             modifier = Modifier
