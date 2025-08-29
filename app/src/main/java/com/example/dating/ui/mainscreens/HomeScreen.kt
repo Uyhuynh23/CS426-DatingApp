@@ -54,20 +54,22 @@ import androidx.compose.animation.core.spring
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.viewmodel.HomeViewModel
 import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.dating.data.model.Resource
+import com.example.dating.data.model.User
 
 @Composable
-fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel) {
-    val profiles by homeViewModel.profiles.collectAsState()
-    val isLoading by homeViewModel.isLoading.collectAsState()
-    val errorMessage by homeViewModel.errorMessage.collectAsState()
+fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
+    val uidResource by homeViewModel.profilesState.collectAsState()
+    val usersResource by homeViewModel.usersState.collectAsState()
     val profileIndex = rememberSaveable { mutableStateOf(0) }
 
     // Helper functions
-    suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<Map<String, Any>>, homeViewModel: HomeViewModel, navController: NavController) {
+    suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
         val currentProfile = profiles.getOrNull(profileIndex.value)
         if (currentProfile != null) {
             if (isLike) {
-                val likedUserId = currentProfile["uid"] as? String
+                val likedUserId = currentProfile.uid
                 if (likedUserId != null) {
                     homeViewModel.likeProfile(likedUserId)
                     // Check for match and navigate if found
@@ -85,11 +87,20 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel) {
         offsetX.snapTo(0f)
     }
 
-
     // Only fetch profiles once when the composable is first composed
     LaunchedEffect(Unit) {
-        if (profiles.isEmpty()) {
+        if (uidResource is Resource.Success && (uidResource as Resource.Success<List<String>>).result.isEmpty()) {
+            Log.d("HomeScreen", "fetchHome called, uidResource is empty")
             homeViewModel.fetchHome()
+        }
+    }
+
+    // Fetch users by IDs when uidResource changes
+    LaunchedEffect(uidResource) {
+        if (uidResource is Resource.Success) {
+            val uids = (uidResource as Resource.Success<List<String>>).result
+            Log.d("HomeScreen", "Fetching users by IDs: $uids")
+            homeViewModel.getUserProfilesByIds(uids)
         }
     }
 
@@ -98,9 +109,10 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel) {
     LaunchedEffect(matchFoundUserId) {
         if (matchFoundUserId != null) {
             navController.navigate("match/${matchFoundUserId}")
-            homeViewModel.resetMatchFoundUserId() // Add this function to your ViewModel
+            homeViewModel.resetMatchFoundUserId()
         }
     }
+
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
     Box(modifier = Modifier.fillMaxSize()) {
@@ -110,31 +122,52 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel) {
                 .background(AppColors.MainBackground)
         ) {
             HomeHeader(navController)
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when (uidResource) {
+                is Resource.Loading -> {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else if (errorMessage != null) {
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                    Text("Error: $errorMessage", color = Color.Red)
+                is Resource.Failure -> {
+                    val error = (uidResource as Resource.Failure).exception?.message ?: "Unknown error"
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text("Error: $error", color = Color.Red)
+                    }
                 }
-            } else {
-                ProfileCard(
-                    profiles = profiles,
-                    profileIndex = profileIndex,
-                    handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                        handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
-                    },
-                    animateSwipe = ::animateSwipe
-                )
-                ActionButtons(
-                    profiles = profiles,
-                    profileIndex = profileIndex,
-                    handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                        handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
-                    },
-                    animateSwipe = ::animateSwipe
-                )
+                is Resource.Success -> {
+                    when (usersResource) {
+                        is Resource.Loading -> {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        is Resource.Failure -> {
+                            val error = (usersResource as Resource.Failure).exception?.message ?: "Unknown error"
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                Text("Error: $error", color = Color.Red)
+                            }
+                        }
+                        is Resource.Success -> {
+                            val profiles = (usersResource as Resource.Success<List<User>>).result
+                            ProfileCard(
+                                profiles = profiles,
+                                profileIndex = profileIndex,
+                                handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                                    handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
+                                },
+                                animateSwipe = ::animateSwipe
+                            )
+                            ActionButtons(
+                                profiles = profiles,
+                                profileIndex = profileIndex,
+                                handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                                    handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
+                                },
+                                animateSwipe = ::animateSwipe
+                            )
+                        }
+                    }
+                }
             }
         }
         // Fixed BottomNavigationBar
@@ -195,9 +228,9 @@ fun HomeHeader(navController: NavController) {
 
 @Composable
 fun ProfileCard(
-    profiles: List<Map<String, Any>>,
+    profiles: List<User>,
     profileIndex: MutableState<Int>,
-    handleProfileAction: suspend (Boolean, MutableState<Int>, List<Map<String, Any>>, HomeViewModel) -> Unit,
+    handleProfileAction: suspend (Boolean, MutableState<Int>, List<User>, HomeViewModel) -> Unit,
     animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
     homeViewModel: HomeViewModel = viewModel()
 ) {
@@ -215,10 +248,10 @@ fun ProfileCard(
         return
     }
 
-    val firstName = currentProfile["firstName"] as? String ?: ""
-    val lastName = currentProfile["lastName"] as? String ?: ""
+    val firstName = currentProfile.firstName ?: ""
+    val lastName = currentProfile.lastName ?: ""
     val name = (firstName + " " + lastName).trim().ifEmpty { "Unknown" }
-    val birthday = currentProfile["birthday"] as? String
+    val birthday = currentProfile.birthday
     Log.d("YearBug", "Year: $birthday")
 
     val age = birthday?.let {
@@ -232,8 +265,8 @@ fun ProfileCard(
             "?"
         }
     } ?: "?"
-    val description = currentProfile["description"] as? String ?: "No description"
-    val distance = currentProfile["distance"]?.toString() ?: "1 km"
+    val description = currentProfile.description ?: "No description"
+    val distance = currentProfile.distance?.toString() ?: "1 km"
 
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
@@ -398,9 +431,9 @@ fun ProfileCard(
 
 @Composable
 fun ActionButtons(
-    profiles: List<Map<String, Any>>,
+    profiles: List<User>,
     profileIndex: MutableState<Int>,
-    handleProfileAction: suspend (Boolean, MutableState<Int>, List<Map<String, Any>>, HomeViewModel) -> Unit,
+    handleProfileAction: suspend (Boolean, MutableState<Int>, List<User>, HomeViewModel) -> Unit,
     animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
     homeViewModel: HomeViewModel = viewModel()
 ) {
