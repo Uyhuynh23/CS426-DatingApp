@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dating.ui.theme.AppColors
-import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.viewmodel.MatchViewModel
 import com.example.dating.viewmodel.ProfileViewModel
@@ -31,17 +29,34 @@ import com.example.dating.viewmodel.ProfileViewModel
 @Composable
 fun MatchScreen(navController: NavController, matchedUserId: String?) {
     val matchViewModel: MatchViewModel = hiltViewModel()
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    android.util.Log.d("MatchScreen", "currentUser: $currentUser, uid: ${currentUser?.uid}, email: ${currentUser?.email}, displayName: ${currentUser?.displayName}")
-    val userInfo by matchViewModel.userInfo.collectAsState()
+    val profileViewModel: ProfileViewModel = hiltViewModel()
 
-    LaunchedEffect(currentUser?.uid) {
-        matchViewModel.fetchUsersInfo(listOfNotNull(currentUser?.uid, matchedUserId))
+    val currentUser by profileViewModel.user.collectAsState()
+    val currentUserInfo by matchViewModel.userInfo.collectAsState()
+    val matchedUserInfo by matchViewModel.matchedUserInfo.collectAsState()
+
+    // Set current user info in MatchViewModel
+    LaunchedEffect(currentUser) {
+        matchViewModel.setUser(currentUser)
+    }
+
+    // Set matched user info in MatchViewModel
+    LaunchedEffect(matchedUserId) {
+        if (matchedUserId != null) {
+            val matchedUser = matchViewModel.getUserById(matchedUserId)
+            matchViewModel.setMatchedUser(matchedUser)
+        }
+    }
+    // Save the match when both users are available
+    LaunchedEffect(currentUserInfo?.uid, matchedUserInfo?.uid) {
+        val uid1 = currentUserInfo?.uid
+        val uid2 = matchedUserInfo?.uid
+        if (uid1 != null && uid2 != null) {
+            matchViewModel.saveMatch(uid1, uid2, true)
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-
-
         // Main content
         Box(
             modifier = Modifier
@@ -62,7 +77,7 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                         modifier = Modifier
                             .size(width = 190.dp, height = 280.dp)
                             .align(Alignment.TopEnd)
-                            .offset(x = 55.dp, y = -30.dp)
+                            .offset(x = 55.dp, y = (-30).dp)
                             .rotate(10f)
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color.Black)
@@ -80,7 +95,7 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                         modifier = Modifier
                             .size(width = 190.dp, height = 280.dp)
                             .align(Alignment.BottomStart)
-                            .offset(x = -55.dp, y = 90.dp)
+                            .offset(x = (-55).dp, y = 90.dp)
                             .rotate(-10f)
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color.Black)
@@ -98,7 +113,7 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                         modifier = Modifier
                             .size(60.dp)
                             .align(Alignment.TopEnd)
-                            .offset(x = -75.dp, y = -50.dp)
+                            .offset(x = (-75).dp, y = (-50).dp)
                             .rotate(10f)
                             .background(AppColors.Text_Pink, CircleShape),
                         contentAlignment = Alignment.Center
@@ -116,7 +131,7 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                         modifier = Modifier
                             .size(60.dp)
                             .align(Alignment.BottomStart)
-                            .offset(x = -60.dp, y = 120.dp)
+                            .offset(x = (-60).dp, y = 120.dp)
                             .rotate(-10f)
                             .background(AppColors.Text_Pink, CircleShape),
                         contentAlignment = Alignment.Center
@@ -131,8 +146,6 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
 
                 }
                 Spacer(modifier = Modifier.height(160.dp))
-                val currentUserInfo = userInfo.find { it.uid == currentUser?.uid }
-                val matchedUserInfo = userInfo.find { it.uid == matchedUserId }
                 Text(
                     text = "It's a match, ${currentUserInfo?.firstName ?: "You"}!",
                     fontWeight = FontWeight.Bold,
@@ -140,6 +153,14 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                     color = Color.Black,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
+                // Example: Show matched user name
+                Text(
+                    text = "Matched with: ${matchedUserInfo?.firstName ?: "Unknown"}",
+                    fontSize = 20.sp,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                // You can use currentUserInfo?.avatarUrl and matchedUserInfo?.avatarUrl for images
                 Text(
                     text = "Start a conversation now with each other.",
                     fontSize = 16.sp,

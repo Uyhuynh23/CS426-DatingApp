@@ -24,9 +24,6 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
-    private val _profilesState = MutableStateFlow<Resource<List<String>>>(Resource.Loading)
-    val profilesState: StateFlow<Resource<List<String>>> = _profilesState
-
     private val _matchFoundUserId = MutableStateFlow<String?>(null)
     val matchFoundUserId: StateFlow<String?> = _matchFoundUserId
 
@@ -34,19 +31,39 @@ class HomeViewModel @Inject constructor(
     val usersState: StateFlow<Resource<List<User>>> = _usersState
 
     init {
-
         fetchHome()
     }
 
-    fun fetchHome() {
+    private fun fetchHome() {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
-            _profilesState.value = Resource.Loading
             try {
-                val result = homeRepository.fetchProfiles() // Should return List<String> (UIDs)
-                _profilesState.value = Resource.Success(result)
+                _usersState.value = Resource.Loading
+                // Get list of user IDs for home (excluding current user)
+                val profileIds = homeRepository.fetchProfiles().filter { it != currentUserId }
+                if (profileIds.isEmpty()) {
+                    _usersState.value = Resource.Success(emptyList())
+                    return@launch
+                }
+                // Fetch user profiles
+                val users = getUserProfilesByIds(profileIds)
+                _usersState.value = Resource.Success(users)
             } catch (e: Exception) {
-                _profilesState.value = Resource.Failure(e as? Exception ?: Exception(e.message))
+                _usersState.value = Resource.Failure(e)
             }
+        }
+    }
+
+    private suspend fun getUserProfilesByIds(uids: List<String>): List<User> {
+        return try {
+            val snapshot = db.collection("users")
+                .whereIn("uid", uids)
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { it.toObject(User::class.java) }
+        } catch (e: Exception) {
+            android.util.Log.e("HomeViewModel", "Error fetching users: ", e)
+            emptyList()
         }
     }
 
@@ -66,34 +83,6 @@ class HomeViewModel @Inject constructor(
                     _matchFoundUserId.value = null
                     android.util.Log.d("HomeViewModel", "Calling MatchRepository.saveMatch with $likerId and $likedId, status=false")
                     matchRepository.saveMatch(likerId, likedId, false)
-                }
-            } catch (e: Exception) {
-                _profilesState.value = Resource.Failure(e as? Exception ?: Exception(e.message))
-            }
-        }
-    }
-
-    fun getUserProfilesByIds(uids: List<String>) {
-        viewModelScope.launch {
-            _usersState.value = Resource.Loading
-            try {
-                val users = homeRepository.getUserProfilesByIds(uids)
-                _usersState.value = Resource.Success(users)
-            } catch (e: Exception) {
-                _usersState.value = Resource.Failure(e as? Exception ?: Exception(e.message))
-            }
-        }
-    }
-
-    fun fetchUserById(id: String) {
-        viewModelScope.launch {
-            _usersState.value = Resource.Loading
-            try {
-                val user = homeRepository.getUserProfilesByIds(listOf(id)).firstOrNull()
-                if (user != null) {
-                    _usersState.value = Resource.Success(listOf(user))
-                } else {
-                    _usersState.value = Resource.Failure(Exception("User not found"))
                 }
             } catch (e: Exception) {
                 _usersState.value = Resource.Failure(e as? Exception ?: Exception(e.message))

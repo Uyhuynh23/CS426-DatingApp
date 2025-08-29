@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -17,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,7 +28,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -60,12 +57,11 @@ import com.example.dating.data.model.User
 
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
-    val uidResource by homeViewModel.profilesState.collectAsState()
     val usersResource by homeViewModel.usersState.collectAsState()
     val profileIndex = rememberSaveable { mutableStateOf(0) }
 
     // Helper functions
-    suspend fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
+    fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
         val currentProfile = profiles.getOrNull(profileIndex.value)
         if (currentProfile != null) {
             if (isLike) {
@@ -87,23 +83,6 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
         offsetX.snapTo(0f)
     }
 
-    // Only fetch profiles once when the composable is first composed
-    LaunchedEffect(Unit) {
-        if (uidResource is Resource.Success && (uidResource as Resource.Success<List<String>>).result.isEmpty()) {
-            Log.d("HomeScreen", "fetchHome called, uidResource is empty")
-            homeViewModel.fetchHome()
-        }
-    }
-
-    // Fetch users by IDs when uidResource changes
-    LaunchedEffect(uidResource) {
-        if (uidResource is Resource.Success) {
-            val uids = (uidResource as Resource.Success<List<String>>).result
-            Log.d("HomeScreen", "Fetching users by IDs: $uids")
-            homeViewModel.getUserProfilesByIds(uids)
-        }
-    }
-
     // Observe matchFoundUserId and navigate if a match is found
     val matchFoundUserId by homeViewModel.matchFoundUserId.collectAsState()
     LaunchedEffect(matchFoundUserId) {
@@ -122,54 +101,62 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                 .background(AppColors.MainBackground)
         ) {
             HomeHeader(navController)
-            when (uidResource) {
+            when (usersResource) {
                 is Resource.Loading -> {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 }
+
                 is Resource.Failure -> {
-                    val error = (uidResource as Resource.Failure).exception?.message ?: "Unknown error"
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    val error =
+                        (usersResource as Resource.Failure).exception?.message ?: "Unknown error"
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text("Error: $error", color = Color.Red)
                     }
                 }
+
                 is Resource.Success -> {
-                    when (usersResource) {
-                        is Resource.Loading -> {
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                        is Resource.Failure -> {
-                            val error = (usersResource as Resource.Failure).exception?.message ?: "Unknown error"
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                Text("Error: $error", color = Color.Red)
-                            }
-                        }
-                        is Resource.Success -> {
-                            val profiles = (usersResource as Resource.Success<List<User>>).result
-                            ProfileCard(
-                                profiles = profiles,
-                                profileIndex = profileIndex,
-                                handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                                    handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
-                                },
-                                animateSwipe = ::animateSwipe
+                    val users = (usersResource as Resource.Success<List<User>>).result
+                    // You can use your ProfileCard and ActionButtons here, or a grid like FavoriteScreen
+                    ProfileCard(
+                        profiles = users,
+                        profileIndex = profileIndex,
+                        handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                            handleProfileAction(
+                                isLike,
+                                profileIndex,
+                                profiles,
+                                homeViewModel,
+                                navController
                             )
-                            ActionButtons(
-                                profiles = profiles,
-                                profileIndex = profileIndex,
-                                handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                                    handleProfileAction(isLike, profileIndex, profiles, homeViewModel, navController)
-                                },
-                                animateSwipe = ::animateSwipe
+                        },
+                        animateSwipe = ::animateSwipe
+                    )
+                    ActionButtons(
+                        profiles = users,
+                        profileIndex = profileIndex,
+                        handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                            handleProfileAction(
+                                isLike,
+                                profileIndex,
+                                profiles,
+                                homeViewModel,
+                                navController
                             )
-                        }
-                    }
+                        },
+                        animateSwipe = ::animateSwipe
+                    )
                 }
             }
         }
+
         // Fixed BottomNavigationBar
         Box(
             modifier = Modifier

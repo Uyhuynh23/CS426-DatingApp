@@ -8,21 +8,51 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-
+import com.example.dating.data.model.User
+import com.example.dating.data.model.repository.UserRepository
+import kotlinx.coroutines.flow.first
 @HiltViewModel
 class MatchViewModel @Inject constructor(
-    private val matchRepository: MatchRepository
-) : ViewModel() {
-    private val _currentUserFirstName = MutableStateFlow<String>("You")
-    val currentUserFirstName: StateFlow<String> = _currentUserFirstName
+    private val matchRepository: MatchRepository,
+    private val userRepository: UserRepository
 
-    private val _userAvatarUrl = MutableStateFlow<String?>(null)
-    val userAvatarUrl: StateFlow<String?> = _userAvatarUrl
+) : ViewModel() {
 
     data class UserInfo(val uid: String, val firstName: String, val avatarUrl: String?)
 
-    private val _userInfo = MutableStateFlow<List<UserInfo>>(emptyList())
-    val userInfo: StateFlow<List<UserInfo>> = _userInfo
+    private val _userInfo = MutableStateFlow<UserInfo?>(null)
+    val userInfo: StateFlow<UserInfo?> = _userInfo
+
+    private val _user = MutableStateFlow<User?>(null)
+    val user: StateFlow<User?> = _user
+
+    private val _matchedUserInfo = MutableStateFlow<UserInfo?>(null)
+    val matchedUserInfo: StateFlow<UserInfo?> = _matchedUserInfo
+
+    fun setUser(user: User?) {
+        _user.value = user
+        if (user != null) {
+            _userInfo.value = UserInfo(
+                uid = user.uid,
+                firstName = user.firstName,
+                avatarUrl = user.imageUrl.firstOrNull()
+            )
+        } else {
+            _userInfo.value = null
+        }
+    }
+
+    fun setMatchedUser(user: User?) {
+        if (user != null) {
+            _matchedUserInfo.value = UserInfo(
+                uid = user.uid,
+                firstName = user.firstName,
+                avatarUrl = user.imageUrl.firstOrNull()
+            )
+        } else {
+            _matchedUserInfo.value = null
+        }
+    }
 
     fun saveMatch(userId1: String, userId2: String, status: Boolean) {
         viewModelScope.launch {
@@ -30,19 +60,9 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    fun fetchUsersInfo(uids: List<String>) {
-        viewModelScope.launch {
-            try {
-                val userInfoList = uids.mapNotNull { userId ->
-                    val userDoc = matchRepository.getUserDocument(userId)
-                    val firstName = userDoc["firstName"] as? String ?: "You"
-                    val avatarUrl = userDoc["avatarUrl"] as? String
-                    UserInfo(uid = userId, firstName = firstName, avatarUrl = avatarUrl)
-                }
-                _userInfo.value = userInfoList
-            } catch (e: Exception) {
-                _userInfo.value = emptyList()
-            }
-        }
+    suspend fun getUserById(id: String): User? {
+        return userRepository.getUser(id).first()
     }
+
+
 }
