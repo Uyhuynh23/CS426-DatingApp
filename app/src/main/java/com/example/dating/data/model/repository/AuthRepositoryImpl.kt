@@ -6,9 +6,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+//import retrofit2.Retrofit
+//import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.google.firebase.auth.GoogleAuthProvider
 
 class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth
@@ -47,6 +52,17 @@ class AuthRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             e.message ?: "Failed to sign up or send verification email"
+        }
+    }
+
+    override suspend fun signupWithGoogle(idToken: String): Resource<FirebaseUser> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = firebaseAuth.signInWithCredential(credential).await()
+            Resource.Success(result.user!!)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Resource.Failure(e)
         }
     }
 

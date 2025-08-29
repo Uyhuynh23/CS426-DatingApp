@@ -19,4 +19,6 @@ sealed class Screen(val route: String) {
     object Match : Screen("match") // để test sau
 
 
+
+    object Messages : Screen("messages") // để test sau
 }

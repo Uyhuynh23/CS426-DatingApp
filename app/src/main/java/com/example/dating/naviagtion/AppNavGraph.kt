@@ -15,6 +15,7 @@ import com.example.dating.ui.auth.VerifyEmailScreen
 import com.example.dating.ui.auth.EmailScreen
 import com.example.dating.ui.mainscreens.FavoriteScreen
 import com.example.dating.ui.mainscreens.MatchScreen
+import com.example.dating.ui.chat.MessagesScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
 import com.example.dating.ui.profile.EnableNotificationScreen
@@ -24,12 +25,15 @@ import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.ui.mainscreens.HomeScreen
 import com.example.dating.ui.profile.ProfileDetailsScreen
 import com.example.dating.viewmodel.HomeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
+fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
+    val authViewModel = hiltViewModel<AuthViewModel>()
+    val messageViewModel = hiltViewModel<com.example.dating.viewmodel.MessagesViewModel>()
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Messages.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -37,7 +41,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         }
 
         composable(Screen.Register.route) {
-            SignUpScreen(navController)
+            SignUpScreen(viewModel=authViewModel,navController=navController)
         }
 
         composable(Screen.PhoneNumber.route) {
@@ -106,6 +110,10 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
             } else {
                 Text("No matched user ID provided")
             }
+        }
+
+        composable(Screen.Messages.route) {
+            MessagesScreen(viewModel = messageViewModel)
         }
     }
 }
