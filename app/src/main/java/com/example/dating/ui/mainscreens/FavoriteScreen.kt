@@ -31,63 +31,62 @@ import androidx.compose.foundation.verticalScroll
 import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.dating.ui.components.BottomNavigationBar
 
 @Composable
 fun FavoriteScreen(navController: NavController, favoriteViewModel: FavoriteViewModel = hiltViewModel()) {
     val usersState by favoriteViewModel.usersState.collectAsState()
 
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.MainBackground)
-    ) {
-        Column(
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(navController, 1)
+        }
+    ) { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .background(AppColors.MainBackground)
+                .padding(paddingValues)
         ) {
-            FavoriteHeader(navController)
-            when (usersState) {
-                is Resource.Loading -> {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is Resource.Failure -> {
-                    val error = (usersState as Resource.Failure).exception?.message ?: "Unknown error"
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        Text("Error: $error", color = Color.Red)
-                    }
-                }
-                is Resource.Success -> {
-                    val users = (usersState as Resource.Success<List<User>>).result
-                    if (users.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                FavoriteHeader(navController)
+                when (usersState) {
+                    is Resource.Loading -> {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            Text("No users found", color = Color.Gray)
+                            CircularProgressIndicator()
                         }
-                    } else {
-                        Text("This is a list of people who have liked you.", fontSize = 16.sp, modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp, end = 16.dp), color = Color.Black)
-                        ProfileGrid(
-                            profiles = users,
-                            navController = navController,
-                            showDelete = false,
-                            moreAvailable = users.size >= 9,
-                            onMoreClick = { /* TODO: Show all likedMeProfiles */ }
-                        )
+                    }
+                    is Resource.Failure -> {
+                        val error = (usersState as Resource.Failure).exception?.message ?: "Unknown error"
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Text("Error: $error", color = Color.Red)
+                        }
+                    }
+                    is Resource.Success -> {
+                        val users = (usersState as Resource.Success<List<User>>).result
+                        if (users.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                Text("No users found", color = Color.Gray)
+                            }
+                        } else {
+                            Text("This is a list of people who have liked you.", fontSize = 16.sp, modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp, end = 16.dp), color = Color.Black)
+                            ProfileGrid(
+                                profiles = users,
+                                navController = navController,
+                                showDelete = false,
+                                moreAvailable = users.size >= 9,
+                                onMoreClick = { /* TODO: Show all likedMeProfiles */ }
+                            )
+                        }
                     }
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            FavoriteBottomNavigationBar(navController)
-        }
     }
-
 }
 
 @Composable
@@ -208,40 +207,6 @@ fun ProfileGrid(
             Button(onClick = { showAll = false }, modifier = Modifier.align(Alignment.CenterHorizontally).padding(8.dp)) {
                 Text("Show Less")
             }
-        }
-    }
-}
-
-@Composable
-fun FavoriteBottomNavigationBar(navController: NavController) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(103.dp)
-            .background(Color.White.copy(alpha = 1.0f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            BottomNavIcon(
-                icon = Icons.Default.ViewModule,
-                isActive = false
-            ) { navController.popBackStack()  }
-            BottomNavIcon(
-                icon = Icons.Default.Favorite,
-                isActive = true
-            ) { /* Already on favorite */ }
-            BottomNavIcon(
-                icon = Icons.Default.Chat,
-                isActive = false
-            ) { /* TODO: Handle navigation */ }
-            BottomNavIcon(
-                icon = Icons.Default.Person,
-                isActive = false
-            ) { /* TODO: Handle navigation */ }
         }
     }
 }

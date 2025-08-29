@@ -44,7 +44,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         navController = navController,
         startDestination = "root_graph"
     ) {
-        navigation(startDestination = Screen.Login.route, route = "root_graph") {
+        navigation(startDestination = Screen.Onboarding.route, route = "root_graph") {
             // Onboarding
             composable(Screen.Onboarding.route) {
                 OnboardingScreen(navController = navController)
@@ -63,7 +63,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 ProfileScreen(navController = navController)
             }
 
-            composable(Screen.ProfileDetails.route) {backStackEntry ->
+            composable(Screen.ProfileDetails.route) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("root_graph")
                 }
@@ -109,9 +109,6 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 HomeScreen(navController, homeViewModel)
             }
 
-        composable(Screen.Messages.route) {
-            MessagesScreen(navController, viewModel = messageViewModel)
-            // Favorite
             composable(Screen.Favorite.route) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("root_graph")
@@ -134,22 +131,21 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
             }
 
             composable(Screen.Messages.route) {
-                MessagesScreen(viewModel = messageViewModel)
+                MessagesScreen(navController, viewModel = messageViewModel)
+            }
+
+            composable(
+                route = Screen.ChatDetail.route,
+                arguments = listOf(
+                    navArgument("conversationId") {
+                        type = NavType.StringType
+                        nullable = false
+                    }
+                )
+            ) { backStackEntry ->
+                val conversationId = backStackEntry.arguments?.getString("conversationId")!!
+                ChatDetailScreen(conversationId = conversationId, navController = navController)
             }
         }
-
-        composable(
-            route = Screen.ChatDetail.route,
-            arguments = listOf(
-                navArgument("conversationId") {
-                    type = NavType.StringType
-                    nullable = false
-                }
-            )
-        ) { backStackEntry ->
-            val conversationId = backStackEntry.arguments?.getString("conversationId")!!
-            ChatDetailScreen(conversationId = conversationId, navController = navController)
-        }
-
     }
 }

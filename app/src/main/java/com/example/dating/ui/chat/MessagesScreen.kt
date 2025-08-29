@@ -37,6 +37,7 @@ import com.example.dating.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.navigation.NavController
+import com.example.dating.ui.components.BottomNavigationBar
 
 
 
@@ -48,66 +49,78 @@ fun MessagesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFEEAFA))) {
-        TopAppBar(title = { Text("Messages") }, actions = {
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.Tune, contentDescription = null)
-            }
-        })
-
-        SearchBar()
-
-        when {
-            uiState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Messages") }, actions = {
+                IconButton(onClick = {}) {
+                    Icon(Icons.Default.Tune, contentDescription = null)
                 }
-            }
-            uiState.error != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(uiState.error ?: "Unknown error occurred", color = Color.Red)
-                }
-            }
-            uiState.messages.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No messages yet")
-                }
-            }
-            else -> {
-                Text("Activities", Modifier.padding(start = 16.dp, top = 8.dp), fontWeight = FontWeight.SemiBold)
+            })
+        },
+        bottomBar = {
+            BottomNavigationBar(navController, 2)
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFFEEAFA))
+                .padding(paddingValues)
+        ) {
+            SearchBar()
 
-                LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    items(uiState.messages) {
-                        StoryAvatar(it.peer)
+            when {
+                uiState.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
+                uiState.error != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(uiState.error ?: "Unknown error occurred", color = Color.Red)
+                    }
+                }
+                uiState.messages.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No messages yet")
+                    }
+                }
+                else -> {
+                    Text("Activities", Modifier.padding(start = 16.dp, top = 8.dp), fontWeight = FontWeight.SemiBold)
 
-                Spacer(Modifier.height(8.dp))
+                    LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
+                        items(uiState.messages) {
+                            StoryAvatar(it.peer)
+                        }
+                    }
 
-                Card(
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    LazyColumn {
-                        items(uiState.messages) { conversation ->
-                            MessageItem(
-                                item = conversation,
-                                onClick = {
-                                    navController.navigate(
-                                        Screen.ChatDetail.createRoute(conversation.id)
-                                    )
-                                }
-                            )
-                            Divider()
+                    Spacer(Modifier.height(8.dp))
+
+                    Card(
+                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn {
+                            items(uiState.messages) { conversation ->
+                                MessageItem(
+                                    item = conversation,
+                                    onClick = {
+                                        navController.navigate(
+                                            Screen.ChatDetail.createRoute(conversation.id)
+                                        )
+                                    }
+                                )
+                                Divider()
+                            }
                         }
                     }
                 }
