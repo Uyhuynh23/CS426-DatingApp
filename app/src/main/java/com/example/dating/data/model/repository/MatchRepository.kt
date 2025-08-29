@@ -3,8 +3,11 @@ package com.example.dating.data.model.repository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class MatchRepository {
+@Singleton
+class MatchRepository @Inject constructor() {
     private val db = FirebaseFirestore.getInstance()
 
     suspend fun saveMatch(userId1: String, userId2: String, status: Boolean) {
@@ -27,16 +30,10 @@ class MatchRepository {
         }
     }
 
-    suspend fun getUserFirstName(uid: String): String {
-        val db = FirebaseFirestore.getInstance()
-        return try {
-            val doc = db.collection("users").document(uid).get().await()
-            val firstName = doc.getString("firstName")
-            android.util.Log.d("MatchRepository", "getUserFirstName: uid=$uid, firstName=$firstName, docExists=${doc.exists()}")
-            firstName ?: "You"
-        } catch (e: Exception) {
-            android.util.Log.e("MatchRepository", "getUserFirstName error: uid=$uid, exception=${e.message}")
-            "You"
-        }
+    suspend fun getUserDocument(userId: String): Map<String, Any?> {
+        val doc = db.collection("users").document(userId).get().await()
+        return doc.data ?: emptyMap()
     }
+
 }
+

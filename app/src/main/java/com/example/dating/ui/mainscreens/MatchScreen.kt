@@ -24,17 +24,19 @@ import androidx.navigation.NavController
 import com.example.dating.ui.theme.AppColors
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.viewmodel.MatchViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dating.viewmodel.ProfileViewModel
 
 @Composable
 fun MatchScreen(navController: NavController, matchedUserId: String?) {
-    val matchViewModel: MatchViewModel = viewModel()
+    val matchViewModel: MatchViewModel = hiltViewModel()
     val currentUser = FirebaseAuth.getInstance().currentUser
     android.util.Log.d("MatchScreen", "currentUser: $currentUser, uid: ${currentUser?.uid}, email: ${currentUser?.email}, displayName: ${currentUser?.displayName}")
-    val currentUserFirstName by matchViewModel.currentUserFirstName.collectAsState()
+    val userInfo by matchViewModel.userInfo.collectAsState()
+
     LaunchedEffect(currentUser?.uid) {
-        matchViewModel.fetchCurrentUserFirstName(currentUser?.uid)
+        matchViewModel.fetchUsersInfo(listOfNotNull(currentUser?.uid, matchedUserId))
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -129,8 +131,10 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
 
                 }
                 Spacer(modifier = Modifier.height(160.dp))
+                val currentUserInfo = userInfo.find { it.uid == currentUser?.uid }
+                val matchedUserInfo = userInfo.find { it.uid == matchedUserId }
                 Text(
-                    text = "It's a match, $currentUserFirstName!",
+                    text = "It's a match, ${currentUserInfo?.firstName ?: "You"}!",
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
                     color = Color.Black,
