@@ -3,6 +3,7 @@ package com.example.dating.viewmodel
 import androidx.lifecycle.ViewModel
 import com.example.dating.data.model.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,41 +25,30 @@ class UserViewModel @Inject constructor(
 
     private var registration: ListenerRegistration? = null
 
-    init {
-        loadCurrentUser()
-    }
-
-    /** Public: gọi lại sau khi login/logout để reload dữ liệu */
-    fun refresh() = loadCurrentUser()
-
-    private fun loadCurrentUser() {
-        // hủy listener cũ nếu có
+    /**
+     * Gọi từ UserProfileScreen. Nếu uid=null -> lấy current user;
+     * nếu vẫn null -> fallback dummy để test UI.
+     */
+    fun observeUser(uid: String?) {
         registration?.remove()
         _isLoading.value = true
 
-        val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) {
-            // Chưa đăng nhập → cho dummy để UI chạy
+        val targetUid = uid ?: auth.currentUser?.uid
+        if (targetUid.isNullOrBlank()) {
             _user.value = createDummyUser()
             _isLoading.value = false
             return
         }
 
-        // Realtime listen users/{uid}
         registration = firestore.collection("users")
-            .document(uid)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
+            .document(targetUid)
+            .addSnapshotListener { snap, err ->
+                if (err != null || snap == null || !snap.exists()) {
                     _user.value = createDummyUser()
                     _isLoading.value = false
                     return@addSnapshotListener
                 }
-
-                if (snapshot != null && snapshot.exists()) {
-                    _user.value = snapshot.toObject(User::class.java) ?: createDummyUser()
-                } else {
-                    _user.value = createDummyUser()
-                }
+                _user.value = snapshotToUser(snap, targetUid)
                 _isLoading.value = false
             }
     }
@@ -66,6 +56,26 @@ class UserViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         registration?.remove()
+    }
+
+    // ---- Helper: đọc an toàn, lọc null ----
+    private fun snapshotToUser(doc: DocumentSnapshot, uid: String): User {
+        val imageUrl = (doc.get("imageUrl") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        val interests = (doc.get("interests") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+
+        return User(
+            uid = uid,
+            firstName = doc.getString("firstName").orEmpty(),
+            lastName  = doc.getString("lastName").orEmpty(),
+            birthday  = doc.getString("birthday"),
+            imageUrl  = imageUrl,
+            avatarUrl = doc.getString("avatarUrl") ?: imageUrl.firstOrNull(),
+            gender    = doc.getString("gender"),
+            job       = doc.getString("job") ?: "Professional model",
+            location  = doc.getString("location") ?: "Chicago, IL, United States",
+            description = doc.getString("description"),
+            interests   = interests
+        )
     }
 
     private fun createDummyUser(): User {
@@ -80,12 +90,12 @@ class UserViewModel @Inject constructor(
             firstName = "Jessica",
             lastName = "Parker",
             birthday = "1995-06-15",
+            imageUrl = demoImages,
+            avatarUrl = demoImages.first(),
             job = "Professional model",
             location = "Chicago, IL, United States",
             description = "My name is Jessica Parker and I enjoy meeting new people and finding ways to help them have an uplifting experience.",
-            interests = listOf("Traveling", "Books", "Music", "Dancing", "Modeling"),
-            imageUrl = demoImages,
-            avatarUrl = demoImages.first()
+            interests = listOf("Traveling", "Books", "Music", "Dancing", "Modeling")
         )
     }
 }

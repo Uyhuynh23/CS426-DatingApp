@@ -31,7 +31,7 @@ import com.example.dating.ui.profile.PhotoViewerScreen
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = viewModel()) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Register.route
+        startDestination = Screen.Login.route
     ) {
         // Onboarding
         composable(Screen.Onboarding.route) {
@@ -91,11 +91,25 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         composable(Screen.Home.route) {
             HomeScreen(navController)
         }
-        // User Profile
-        composable(Screen.UserProfile.route) {
-            UserProfileScreen(navController = navController)
+
+        // UserProfile theo uid
+        composable(
+            route = Screen.UserProfileById.route,
+            arguments = listOf(navArgument("uid") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val uid = backStackEntry.arguments?.getString("uid")
+            UserProfileScreen(
+                navController = navController,
+                userUid = uid
+            )
         }
 
+        // giữ route cũ nếu cần test không tham số
+        composable(Screen.UserProfile.route) {
+            UserProfileScreen(navController = navController, userUid = null)
+        }
+
+        // Photo viewer
         composable(
             route = Screen.PhotoViewer.route,
             arguments = listOf(navArgument("startIndex") { type = NavType.IntType })
@@ -112,6 +126,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 startIndex = startIndex
             )
         }
+
     }
 }
 
