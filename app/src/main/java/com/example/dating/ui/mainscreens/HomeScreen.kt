@@ -59,6 +59,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.User
 import com.example.dating.ui.components.BottomNavigationBar
+import androidx.compose.foundation.gestures.detectTapGestures
+import com.example.dating.navigation.Screen
 
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
@@ -196,7 +198,8 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                                             navController
                                         )
                                     },
-                                    animateSwipe = ::animateSwipe
+                                    animateSwipe = ::animateSwipe,
+                                    navController = navController // Pass navController here
                                 )
                             }
 
@@ -275,10 +278,10 @@ fun ProfileCard(
     profileIndex: MutableState<Int>,
     handleProfileAction: suspend (Boolean, MutableState<Int>, List<User>, HomeViewModel) -> Unit,
     animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    navController: NavController
 ) {
     val currentProfile = profiles.getOrNull(profileIndex.value)
-
     if (currentProfile == null) {
         Box(
             modifier = Modifier
@@ -354,6 +357,16 @@ fun ProfileCard(
                 .rotate(cardRotation)
                 .clip(RoundedCornerShape(32.dp))
                 .background(Color(0xFF23222B))
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            currentProfile.uid?.let { uid ->
+                                Log.d("Navigation", "Double tap detected, navigating to user profile with uid: $uid")
+                                navController.navigate(Screen.UserProfile.route(uid))
+                            }
+                        }
+                    )
+                }
                 .pointerInput(profileIndex.value) {
                     detectDragGestures(
                         onDragStart = { isDragging.value = true },
@@ -362,36 +375,18 @@ fun ProfileCard(
                             scope.launch {
                                 when {
                                     offsetX.value > threshold -> {
-                                        handleProfileAction(
-                                            true,
-                                            profileIndex,
-                                            profiles,
-                                            homeViewModel
-                                        )
-                                        animateSwipe(offsetX, 1f) // Pass direction explicitly
+                                        handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                                        animateSwipe(offsetX, 1f)
                                         offsetY.snapTo(0f)
                                     }
-
                                     offsetX.value < -threshold -> {
-                                        handleProfileAction(
-                                            false,
-                                            profileIndex,
-                                            profiles,
-                                            homeViewModel
-                                        )
-                                        animateSwipe(offsetX, -1f) // Pass direction explicitly
+                                        handleProfileAction(false, profileIndex, profiles, homeViewModel)
+                                        animateSwipe(offsetX, -1f)
                                         offsetY.snapTo(0f)
                                     }
-
                                     else -> {
-                                        offsetX.animateTo(
-                                            0f,
-                                            spring(stiffness = Spring.StiffnessMedium)
-                                        )
-                                        offsetY.animateTo(
-                                            0f,
-                                            spring(stiffness = Spring.StiffnessMedium)
-                                        )
+                                        offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                        offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
                                     }
                                 }
                             }
@@ -576,4 +571,3 @@ fun ActionButton(
         )
     }
 }
-

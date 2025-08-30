@@ -18,16 +18,13 @@ sealed class Screen(val route: String) {
     object Favorite : Screen("favorite") // để test sau
     object Match : Screen("match") // để test sau
 
-
-
     object Messages : Screen("messages") // để test sau
 
     object ChatDetail : Screen("chat_detail/{conversationId}") {
         fun createRoute(conversationId: String) = "chat_detail/$conversationId"
     }
 
-    object UserProfile: Screen("user_profile")
-    object UserProfileById : Screen("user_profile/{uid}") {
+    object UserProfile : Screen("user_profile/{uid}") {
         fun route(uid: String) = "user_profile/$uid"
     }
     object PhotoViewer: Screen("photo_viewer/{startIndex}") {

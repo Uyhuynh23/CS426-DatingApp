@@ -100,6 +100,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 // Enable notification screen can be implemented here
                 EnableNotificationScreen(navController)
             }
+
             // Login
             composable(Screen.Login.route) {
                 LoginScreen(viewModel = authViewModel, navController = navController)
@@ -149,22 +150,12 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 ChatDetailScreen(conversationId = conversationId, navController = navController)
             }
 
-
-            // UserProfile theo uid
             composable(
-                route = Screen.UserProfileById.route,
+                route = "user_profile/{uid}",
                 arguments = listOf(navArgument("uid") { type = NavType.StringType })
             ) { backStackEntry ->
                 val uid = backStackEntry.arguments?.getString("uid")
-                UserProfileScreen(
-                    navController = navController,
-                    userUid = uid
-                )
-            }
-
-            // giữ route cũ nếu cần test không tham số
-            composable(Screen.UserProfile.route) {
-                UserProfileScreen(navController = navController, userUid = null)
+                UserProfileScreen(navController = navController, userUid = uid)
             }
 
             // Photo viewer
