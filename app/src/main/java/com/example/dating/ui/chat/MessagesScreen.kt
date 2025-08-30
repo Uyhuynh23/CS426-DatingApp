@@ -38,7 +38,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.navigation.NavController
 import com.example.dating.ui.components.BottomNavigationBar
-
+import com.example.dating.ui.theme.AppColors
+import com.example.dating.ui.components.MessagesHeader
+import androidx.compose.ui.unit.Dp
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,80 +51,49 @@ fun MessagesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Messages") }, actions = {
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.Tune, contentDescription = null)
-                }
-            })
-        },
-        bottomBar = {
-            BottomNavigationBar(navController, 2)
-        }
-    ) { paddingValues ->
+    Scaffold(bottomBar = { BottomNavigationBar(navController, 2) }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFEEAFA))
+                .background(AppColors.MainBackground)
                 .padding(paddingValues)
         ) {
-            SearchBar()
+            MessagesHeader(onFilterClick = { /* open filters */ })
 
             when {
-                uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                uiState.error != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(uiState.error ?: "Unknown error occurred", color = Color.Red)
-                    }
-                }
-                uiState.messages.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No messages yet")
-                    }
-                }
-                else -> {
-                    Text("Activities", Modifier.padding(start = 16.dp, top = 8.dp), fontWeight = FontWeight.SemiBold)
 
-                    LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
-                        items(uiState.messages) {
-                            StoryAvatar(it.peer)
-                        }
+                uiState.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    Text(uiState.error ?: "Unknown error", color = Color.Red)
+                }
+
+                else -> {
+                    // Activities
+                    Text(
+                        "Activities",
+                        modifier = Modifier.padding(start = 20.dp, top = 8.dp, end = 20.dp),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    LazyRow(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        items(uiState.messages) { StoryAvatar(it.peer) }
                     }
 
                     Spacer(Modifier.height(8.dp))
 
-                    Card(
-                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        LazyColumn {
-                            items(uiState.messages) { conversation ->
-                                MessageItem(
-                                    item = conversation,
-                                    onClick = {
-                                        navController.navigate(
-                                            Screen.ChatDetail.createRoute(conversation.id)
-                                        )
-                                    }
-                                )
-                                Divider()
-                            }
+                    // White rounded container for the Messages section
+                    MessagesSectionCard(
+                        messages = uiState.messages,
+                        onItemClick = { c ->
+                            navController.navigate(
+                                Screen.ChatDetail.createRoute(c.id)
+                            )
                         }
-                    }
+                    )
                 }
             }
         }
@@ -130,35 +101,58 @@ fun MessagesScreen(
 }
 
 @Composable
-fun SearchBar() {
-    var query by remember { mutableStateOf("") }
+private fun MessagesSectionCard(
+    messages: List<ConversationPreview>,
+    onItemClick: (ConversationPreview) -> Unit
+) {
+    val cardHPad = 20.dp
+    val avatar = 56.dp
+    val gap = 12.dp
+    val startIndent = cardHPad + avatar + gap
 
-    OutlinedTextField(
-        value = query,
-        onValueChange = { query = it },
-        placeholder = { Text("Search") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
-        singleLine = true,
-        trailingIcon = {
-            if (query.isNotBlank()) {
-                IconButton(onClick = { query = "" }) {
-                    Icon(Icons.Default.Clear, contentDescription = null)
-                }
+    Card(
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
+            contentPadding = PaddingValues(
+                start = cardHPad, end = cardHPad, top = 16.dp, bottom = 90.dp
+            )
+        ) {
+            // Header inside the white container
+            item {
+                Text(
+                    text = "Messages",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            items(messages) { conversation ->
+                MessageItem(
+                    item = conversation,
+                    onClick = { onItemClick(conversation) }
+                )
+                InsetDivider(start = startIndent)
             }
         }
-    )
+    }
 }
 
 @Composable
 fun StoryAvatar(user: User) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(8.dp)
+    ) {
         AsyncImage(
             model = user.avatarUrl ?: "https://i.pravatar.cc/150?u=${user.uid}",
             contentDescription = null,
-            modifier = Modifier.size(60.dp).clip(CircleShape).border(2.dp, Color.Magenta, CircleShape)
+            modifier = Modifier
+                .size(60.dp)
+                .clip(CircleShape)
+                .border(2.dp, Color.Magenta, CircleShape)
         )
         Text(user.firstName, fontSize = 12.sp)
     }
@@ -170,7 +164,7 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -180,13 +174,10 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
                 .size(56.dp)
                 .clip(CircleShape)
         )
+
         Spacer(Modifier.width(12.dp))
 
-        Column(
-            Modifier
-                .weight(1f)
-                .padding(end = 8.dp)
-        ) {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = "${item.peer.firstName} ${item.peer.lastName}",
                 style = MaterialTheme.typography.bodyLarge,
@@ -209,4 +200,14 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
             )
         }
     }
+}
+
+/** Divider bắt đầu từ chỗ text (không chạy dưới avatar) */
+@Composable
+fun InsetDivider(start: Dp, modifier: Modifier = Modifier) {
+    Divider(
+        modifier = modifier.padding(start = start),
+        thickness = 0.6.dp,
+        color = Color(0x1A000000) // đen 10% cho nhẹ nhàng
+    )
 }
