@@ -1,117 +1,146 @@
 package com.example.dating.viewmodel
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dating.data.model.MessagesFilterState
 import com.example.dating.data.model.ConversationPreview
 import com.example.dating.data.model.User
 import com.example.dating.data.model.repository.FirebaseMessagesRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.dating.data.model.filterMessages
 
 data class MessagesUiState(
-    val messages: List<ConversationPreview> = emptyList(),
-    val isLoading: Boolean = true,
-    val error: String? = null
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val messages: List<ConversationPreview> = emptyList()
 )
 
 @HiltViewModel
 class MessagesViewModel @Inject constructor(
-    private val repo: FirebaseMessagesRepository
+    private val db: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(MessagesUiState())
     val uiState: StateFlow<MessagesUiState> = _uiState
 
+    private val _filterState = MutableStateFlow(MessagesFilterState())
+    val filterState: StateFlow<MessagesFilterState> = _filterState // Change to StateFlow
+
+    private var originalMessages = listOf<ConversationPreview>()
+    private var loadedConversations = 0
+    private var totalConversations = 0
+
     init {
-        loadFakeMessages()
+        loadMessages()
     }
 
-    private fun loadFakeMessages() {
-        viewModelScope.launch {
-            delay(1000)
+    fun updateFilter(newState: MessagesFilterState) {
+        _filterState.value = newState
+    }
 
-            val fakeUsers = listOf(
-                User(
-                    uid = "1",
-                    firstName = "Jungkook",
-                    lastName = "BTS",
-                    avatarUrl = "https://shorturl.at/bexN0"  // Jungkook Calvin Klein
-                ),
-                User(
-                    uid = "2",
-                    firstName = "Jennie",
-                    lastName = "Blackpink",
-                    avatarUrl = "https://shorturl.at/hkDJ7"  // Jennie Chanel
-                ),
-                User(
-                    uid = "3",
-                    firstName = "Jisoo",
-                    lastName = "Blackpink",
-                    avatarUrl = "https://shorturl.at/ruxBU"  // Jisoo Dior
-                ),
-                User(
-                    uid = "4",
-                    firstName = "Hanni",
-                    lastName = "NewJeans",
-                    avatarUrl = "https://shorturl.at/ehmGU"  // Hanni NewJeans
-                ),
-                User(
-                    uid = "5",
-                    firstName = "IU",
-                    lastName = "",
-                    avatarUrl = "https://shorturl.at/jvFNX"  // IU
+    fun clearFilter() {
+        _filterState.value = MessagesFilterState()
+        _uiState.value = _uiState.value.copy(messages = originalMessages)
+    }
+
+    fun applyFilter() {
+        val filtered = filterMessages(originalMessages, filterState.value)
+        _uiState.value = _uiState.value.copy(messages = filtered)
+    }
+
+    private fun loadMessages() {
+        _uiState.value = MessagesUiState(isLoading = true)
+        val uid = auth.currentUser?.uid ?: return
+
+        db.collection("conversations")
+            .whereArrayContains("participants", uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        messages = emptyList()
+                    )
+                    return@addOnSuccessListener
+                }
+
+                totalConversations = snapshot.size()
+                loadedConversations = 0
+                val conversations = mutableListOf<ConversationPreview>()
+
+                snapshot.documents.forEach { doc ->
+                    val participants = doc.get("participants") as? List<String> ?: return@forEach
+                    val peerId = participants.find { it != uid } ?: return@forEach
+
+                    // Load peer info
+                    db.collection("users")
+                        .document(peerId)
+                        .get()
+                        .addOnSuccessListener { userDoc ->
+                            val peer = User(
+                                uid = peerId,
+                                firstName = userDoc.getString("firstName") ?: "",
+                                lastName = userDoc.getString("lastName") ?: "",
+                                avatarUrl = userDoc.getString("avatarUrl"),
+                                isOnline = userDoc.getBoolean("isOnline") ?: false
+                            )
+
+                            // Get last message
+                            db.collection("conversations")
+                                .document(doc.id)
+                                .collection("messages")
+                                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener { msgSnap ->
+                                    val lastMsg = msgSnap.documents.firstOrNull()
+                                    val preview = ConversationPreview(
+                                        id = doc.id,
+                                        peer = peer,
+                                        lastMessage = lastMsg?.getString("text") ?: "",
+                                        lastMessageTimestamp = lastMsg?.getLong("timestamp") ?: System.currentTimeMillis(),
+                                        timeAgo = formatTimeAgo(lastMsg?.getLong("timestamp") ?: System.currentTimeMillis()),
+                                        unreadCount = doc.getLong("unreadCount")?.toInt() ?: 0
+                                    )
+                                    conversations.add(preview)
+
+                                    loadedConversations++
+                                    if (loadedConversations == totalConversations) {
+                                        originalMessages = conversations.sortedByDescending { it.lastMessageTimestamp }
+                                        _uiState.value = _uiState.value.copy(
+                                            isLoading = false,
+                                            messages = originalMessages
+                                        )
+                                    }
+                                }
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message
                 )
-            )
+            }
+    }
 
-            val fakeMessages = listOf(
-                ConversationPreview(
-                    id = "conv1",
-                    peer = fakeUsers[0],
-                    lastMessage = "Seven billion people in the world~🎵",
-                    timeAgo = "2m",
-                    unreadCount = 3,
-                    isTyping = false
-                ),
-                ConversationPreview(
-                    id = "conv2",
-                    peer = fakeUsers[1],
-                    lastMessage = "Born Pink World Tour! 🎤",
-                    timeAgo = "15m",
-                    unreadCount = 0,
-                    isTyping = true
-                ),
-                ConversationPreview(
-                    id = "conv3",
-                    peer = fakeUsers[2],
-                    lastMessage = "Flower MV hit 500M views! 🌸",
-                    timeAgo = "1h",
-                    unreadCount = 1,
-                    isTyping = false
-                ),
-                ConversationPreview(
-                    id = "conv4",
-                    peer = fakeUsers[3],
-                    lastMessage = "Super Shy~ Super Shy~ 🎵",
-                    timeAgo = "2h",
-                    unreadCount = 0,
-                    isTyping = false
-                ),
-                ConversationPreview(
-                    id = "conv5",
-                    peer = fakeUsers[4],
-                    lastMessage = "Celebrity new album! ⭐",
-                    timeAgo = "1d",
-                    unreadCount = 5,
-                    isTyping = false
-                )
-            )
-
-            _uiState.value = MessagesUiState(
-                messages = fakeMessages,
-                isLoading = false
-            )
+    private fun formatTimeAgo(timestamp: Long): String {
+        if (timestamp == 0L) return ""
+        val now = System.currentTimeMillis()
+        val diff = now - timestamp
+        return when {
+            diff < 60_000 -> "Just now"
+            diff < 3600_000 -> "${diff / 60_000}m"
+            diff < 86400_000 -> "${diff / 3600_000}h"
+            else -> "${diff / 86400_000}d"
         }
     }
 }

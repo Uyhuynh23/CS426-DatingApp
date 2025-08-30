@@ -9,39 +9,29 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dating.data.model.ConversationPreview
 import com.example.dating.data.model.User
-import com.example.dating.viewmodel.MessagesViewModel
-import androidx.compose.material3.*
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.runtime.collectAsState
 import com.example.dating.navigation.Screen
+import com.example.dating.ui.components.*
+import com.example.dating.ui.theme.AppColors
+import com.example.dating.viewmodel.MessagesViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.navigation.NavController
-import com.example.dating.ui.components.BottomNavigationBar
-import com.example.dating.ui.theme.AppColors
-import com.example.dating.ui.components.MessagesHeader
 import androidx.compose.ui.unit.Dp
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +40,9 @@ fun MessagesScreen(
     viewModel: MessagesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val filterState by viewModel.filterState.collectAsState()
+    val sheetState = rememberModalBottomSheetState()
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     Scaffold(bottomBar = { BottomNavigationBar(navController, 2) }) { paddingValues ->
         Column(
@@ -58,7 +51,7 @@ fun MessagesScreen(
                 .background(AppColors.MainBackground)
                 .padding(paddingValues)
         ) {
-            MessagesHeader(onFilterClick = { /* open filters */ })
+            MessagesHeader(onFilterClick = { showFilterSheet = true })
 
             when {
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -97,6 +90,29 @@ fun MessagesScreen(
                 }
             }
         }
+
+        // Filter sheet
+        if (showFilterSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showFilterSheet = false },
+                sheetState = sheetState,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                containerColor = Color.White
+            ) {
+                MessagesFilterSheet(
+                    state = filterState,
+                    onChange = { viewModel.updateFilter(it) },
+                    onClear = {
+                        viewModel.clearFilter()
+                        showFilterSheet = false
+                    },
+                    onApply = {
+                        viewModel.applyFilter()
+                        showFilterSheet = false
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -115,26 +131,49 @@ private fun MessagesSectionCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         modifier = Modifier.fillMaxSize()
     ) {
-        LazyColumn(
-            contentPadding = PaddingValues(
-                start = cardHPad, end = cardHPad, top = 16.dp, bottom = 90.dp
-            )
-        ) {
-            // Header inside the white container
-            item {
+        if (messages.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
-                    text = "Messages",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    text = "No Messages Yet",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "When you match and chat with others,\nyour messages will show up here",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
                 )
             }
-
-            items(messages) { conversation ->
-                MessageItem(
-                    item = conversation,
-                    onClick = { onItemClick(conversation) }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = cardHPad, end = cardHPad, top = 16.dp, bottom = 90.dp
                 )
-                InsetDivider(start = startIndent)
+            ) {
+                // Header inside the white container
+                item {
+                    Text(
+                        text = "Messages",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                items(messages) { conversation ->
+                    MessageItem(
+                        item = conversation,
+                        onClick = { onItemClick(conversation) }
+                    )
+                    InsetDivider(start = startIndent)
+                }
             }
         }
     }
