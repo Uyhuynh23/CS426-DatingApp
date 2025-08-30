@@ -34,7 +34,6 @@ class HomeViewModel @Inject constructor(
     val usersState: StateFlow<Resource<List<User>>> = _usersState
 
     init {
-
         fetchHome()
     }
 

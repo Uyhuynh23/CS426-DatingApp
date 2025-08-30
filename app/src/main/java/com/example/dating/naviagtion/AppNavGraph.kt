@@ -34,6 +34,8 @@ import com.example.dating.ui.chat.ChatDetailScreen
 
 import androidx.navigation.compose.navigation
 import com.example.dating.viewmodel.ProfileViewModel
+import com.example.dating.ui.profile.UserProfileScreen
+import com.example.dating.ui.profile.PhotoViewerScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
@@ -145,6 +147,42 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
             ) { backStackEntry ->
                 val conversationId = backStackEntry.arguments?.getString("conversationId")!!
                 ChatDetailScreen(conversationId = conversationId, navController = navController)
+            }
+
+
+            // UserProfile theo uid
+            composable(
+                route = Screen.UserProfileById.route,
+                arguments = listOf(navArgument("uid") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val uid = backStackEntry.arguments?.getString("uid")
+                UserProfileScreen(
+                    navController = navController,
+                    userUid = uid
+                )
+            }
+
+            // giữ route cũ nếu cần test không tham số
+            composable(Screen.UserProfile.route) {
+                UserProfileScreen(navController = navController, userUid = null)
+            }
+
+            // Photo viewer
+            composable(
+                route = Screen.PhotoViewer.route,
+                arguments = listOf(navArgument("startIndex") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val startIndex = backStackEntry.arguments?.getInt("startIndex") ?: 0
+                val images: ArrayList<String> =
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.get<ArrayList<String>>("images") ?: arrayListOf()
+
+                PhotoViewerScreen(
+                    navController = navController,
+                    images = images,
+                    startIndex = startIndex
+                )
             }
         }
     }
