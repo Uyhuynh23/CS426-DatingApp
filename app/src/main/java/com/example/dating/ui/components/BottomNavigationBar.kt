@@ -71,7 +71,7 @@ fun BottomNavigationBar(navController: NavController, isPageActive: Int) {
             BottomNavIcon(
                 icon = Icons.Default.Person,
                 isActive = (isPageActive == 3)
-            ) { navController.navigate("profile") }
+            ) { navController.navigate("profile_details") }
         }
     }
 }
