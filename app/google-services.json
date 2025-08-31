@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "224972776925",
-    "project_id": "cs426dating",
-    "storage_bucket": "cs426dating.firebasestorage.app"
+    "project_number": "227046142854",
+    "project_id": "cs426-dating-app",
+    "storage_bucket": "cs426-dating-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:224972776925:android:0a02f5c197086ba22a8234",
+        "mobilesdk_app_id": "1:227046142854:android:d08aacccf8007d53883207",
         "android_client_info": {
           "package_name": "com.example.dating"
         }
       },
       "oauth_client": [
         {
-          "client_id": "224972776925-o9d8kjuvsoqvpk8io7r3ifenh0q0p4u3.apps.googleusercontent.com",
+          "client_id": "227046142854-5megetlg19ckvn97astl4aaev6eihh56.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.dating",
-            "certificate_hash": "f3f636b0806a4b08b87b5db022cff2334847fb2b"
+            "certificate_hash": "7545f9f3839bae76077bcd1365623d1a578e19c0"
           }
         },
         {
-          "client_id": "224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com",
+          "client_id": "227046142854-vuqvpvateg6m6gev12036jovd462t348.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDIfhwyIR58qBtEiIobdn957KXsJqFb2hw"
+          "current_key": "AIzaSyA0r910Olqz0q9FHl0Ox0OroorF2uKAZqg"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com",
+              "client_id": "227046142854-vuqvpvateg6m6gev12036jovd462t348.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
