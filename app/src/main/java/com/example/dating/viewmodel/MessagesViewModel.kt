@@ -59,16 +59,18 @@ class MessagesViewModel @Inject constructor(
     private fun loadMessages() {
         _uiState.value = MessagesUiState(isLoading = true)
         val uid = auth.currentUser?.uid ?: return
-
+        android.util.Log.d("MessagesViewModel", "Loading messages for uid: $uid")
         db.collection("conversations")
             .whereArrayContains("participants", uid)
             .get()
             .addOnSuccessListener { snapshot ->
+                android.util.Log.d("MessagesViewModel", "Conversations snapshot size: ${snapshot.size()}")
                 if (snapshot.isEmpty) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         messages = emptyList()
                     )
+                    android.util.Log.d("MessagesViewModel", "No conversations found.")
                     return@addOnSuccessListener
                 }
 
@@ -79,6 +81,7 @@ class MessagesViewModel @Inject constructor(
                 snapshot.documents.forEach { doc ->
                     val participants = doc.get("participants") as? List<String> ?: return@forEach
                     val peerId = participants.find { it != uid } ?: return@forEach
+                    android.util.Log.d("MessagesViewModel", "Conversation doc: ${doc.id}, participants: $participants, peerId: $peerId")
 
                     // Load peer info
                     db.collection("users")
@@ -92,6 +95,7 @@ class MessagesViewModel @Inject constructor(
                                 avatarUrl = userDoc.getString("avatarUrl"),
                                 isOnline = userDoc.getBoolean("isOnline") ?: false
                             )
+                            android.util.Log.d("MessagesViewModel", "Loaded peer: $peer")
 
                             // Get last message
                             db.collection("conversations")
@@ -102,6 +106,7 @@ class MessagesViewModel @Inject constructor(
                                 .get()
                                 .addOnSuccessListener { msgSnap ->
                                     val lastMsg = msgSnap.documents.firstOrNull()
+                                    android.util.Log.d("MessagesViewModel", "Last message: ${lastMsg?.getString("text")}, timestamp: ${lastMsg?.getLong("timestamp")}")
                                     val preview = ConversationPreview(
                                         id = doc.id,
                                         peer = peer,
@@ -113,8 +118,10 @@ class MessagesViewModel @Inject constructor(
                                     conversations.add(preview)
 
                                     loadedConversations++
+                                    android.util.Log.d("MessagesViewModel", "Loaded $loadedConversations/$totalConversations conversations.")
                                     if (loadedConversations == totalConversations) {
                                         originalMessages = conversations.sortedByDescending { it.lastMessageTimestamp }
+                                        android.util.Log.d("MessagesViewModel", "Final loaded messages: $originalMessages")
                                         _uiState.value = _uiState.value.copy(
                                             isLoading = false,
                                             messages = originalMessages
@@ -125,6 +132,7 @@ class MessagesViewModel @Inject constructor(
                 }
             }
             .addOnFailureListener { e ->
+                android.util.Log.e("MessagesViewModel", "Failed to load messages: ${e.message}")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message

@@ -11,11 +11,13 @@ import kotlinx.coroutines.launch
 import com.example.dating.data.model.User
 import com.example.dating.data.model.repository.UserRepository
 import kotlinx.coroutines.flow.first
+import com.example.dating.data.model.repository.FirebaseMessagesRepository
+
 @HiltViewModel
 class MatchViewModel @Inject constructor(
     private val matchRepository: MatchRepository,
-    private val userRepository: UserRepository
-
+    private val userRepository: UserRepository,
+    private val messagesRepository: FirebaseMessagesRepository
 ) : ViewModel() {
 
     data class UserInfo(val uid: String, val firstName: String, val avatarUrl: String?)
@@ -57,6 +59,9 @@ class MatchViewModel @Inject constructor(
     fun saveMatch(userId1: String, userId2: String, status: Boolean) {
         viewModelScope.launch {
             matchRepository.saveMatch(userId1, userId2, status)
+            if (status) {
+                messagesRepository.createConversation(userId1, userId2)
+            }
         }
     }
 

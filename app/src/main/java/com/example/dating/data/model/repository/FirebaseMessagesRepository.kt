@@ -75,4 +75,14 @@ class FirebaseMessagesRepository @Inject constructor(
             else -> "${min / 60} hour"
         }
     }
+
+    suspend fun createConversation(userId1: String, userId2: String) {
+        val conversationData = hashMapOf(
+            "participants" to listOf(userId1, userId2),
+            "lastMessage" to "",
+            "lastTimestamp" to System.currentTimeMillis(),
+            "unread" to mapOf(userId1 to 0, userId2 to 0)
+        )
+        db.collection("conversations").add(conversationData).await()
+    }
 }
