@@ -12,5 +12,6 @@ data class User(
     val location: String? = null,
     val description: String? = null,
     val interests: List<String> = emptyList(),
-    val distance: Int? = null
+    val distance: Int? = null,
+    val isOnline: Boolean = false
 )

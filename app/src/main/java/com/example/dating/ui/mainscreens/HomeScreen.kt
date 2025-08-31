@@ -48,12 +48,16 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.util.lerp
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.material3.Scaffold
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dating.viewmodel.HomeViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.User
+import com.example.dating.ui.components.BottomNavigationBar
+import androidx.compose.foundation.gestures.detectTapGestures
+import com.example.dating.navigation.Screen
 
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
@@ -94,10 +98,15 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
 
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(navController, 0)
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .background(AppColors.MainBackground)
         ) {
             HomeHeader(navController)
@@ -156,16 +165,8 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                 }
             }
         }
-
-        // Fixed BottomNavigationBar
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            BottomNavigationBar(navController)
-        }
     }
+
 }
 
 @Composable
@@ -219,10 +220,10 @@ fun ProfileCard(
     profileIndex: MutableState<Int>,
     handleProfileAction: suspend (Boolean, MutableState<Int>, List<User>, HomeViewModel) -> Unit,
     animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    navController: NavController
 ) {
     val currentProfile = profiles.getOrNull(profileIndex.value)
-
     if (currentProfile == null) {
         Box(
             modifier = Modifier
@@ -298,6 +299,16 @@ fun ProfileCard(
                 .rotate(cardRotation)
                 .clip(RoundedCornerShape(32.dp))
                 .background(Color(0xFF23222B))
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            currentProfile.uid?.let { uid ->
+                                Log.d("Navigation", "Double tap detected, navigating to user profile with uid: $uid")
+                                navController.navigate(Screen.UserProfile.route(uid))
+                            }
+                        }
+                    )
+                }
                 .pointerInput(profileIndex.value) {
                     detectDragGestures(
                         onDragStart = { isDragging.value = true },
@@ -307,12 +318,12 @@ fun ProfileCard(
                                 when {
                                     offsetX.value > threshold -> {
                                         handleProfileAction(true, profileIndex, profiles, homeViewModel)
-                                        animateSwipe(offsetX, 1f) // Pass direction explicitly
+                                        animateSwipe(offsetX, 1f)
                                         offsetY.snapTo(0f)
                                     }
                                     offsetX.value < -threshold -> {
                                         handleProfileAction(false, profileIndex, profiles, homeViewModel)
-                                        animateSwipe(offsetX, -1f) // Pass direction explicitly
+                                        animateSwipe(offsetX, -1f)
                                         offsetY.snapTo(0f)
                                     }
                                     else -> {
@@ -500,55 +511,5 @@ fun ActionButton(
             tint = iconTint,
             modifier = Modifier.size(size * 0.5f)
         )
-    }
-}
-
-@Composable
-fun BottomNavIcon(
-    icon: ImageVector,
-    isActive: Boolean,
-    onClick: () -> Unit
-) {
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isActive) AppColors.Text_Pink else Color(0xFFBDBDBD),
-            modifier = Modifier.size(32.dp)
-        )
-    }
-}
-
-@Composable
-fun BottomNavigationBar(navController: NavController) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(103.dp)
-            .background(Color.White.copy(alpha = 1.0f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            BottomNavIcon(
-                icon = Icons.Default.ViewModule,
-                isActive = true
-            ) { /* TODO: Handle navigation */ }
-            BottomNavIcon(
-                icon = Icons.Default.Favorite,
-                isActive = false
-            ) { navController.navigate("favorite") }
-            BottomNavIcon(
-                icon = Icons.Default.Chat,
-                isActive = false
-            ) { /* TODO: Handle navigation */ }
-            BottomNavIcon(
-                icon = Icons.Default.Person,
-                isActive = false
-            ) { /* TODO: Handle navigation */ }
-        }
     }
 }

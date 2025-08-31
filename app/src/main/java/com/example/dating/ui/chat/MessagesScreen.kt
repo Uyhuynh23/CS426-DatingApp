@@ -9,36 +9,29 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dating.data.model.ConversationPreview
 import com.example.dating.data.model.User
-import com.example.dating.viewmodel.MessagesViewModel
-import androidx.compose.material3.*
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.runtime.collectAsState
 import com.example.dating.navigation.Screen
+import com.example.dating.ui.components.*
+import com.example.dating.ui.theme.AppColors
+import com.example.dating.viewmodel.MessagesViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.navigation.NavController
-
-
+import androidx.compose.ui.unit.Dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,69 +40,139 @@ fun MessagesScreen(
     viewModel: MessagesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val filterState by viewModel.filterState.collectAsState()
+    val sheetState = rememberModalBottomSheetState()
+    var showFilterSheet by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFEEAFA))) {
-        TopAppBar(title = { Text("Messages") }, actions = {
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.Tune, contentDescription = null)
-            }
-        })
+    Scaffold(bottomBar = { BottomNavigationBar(navController, 2) }) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.MainBackground)
+                .padding(paddingValues)
+        ) {
+            MessagesHeader(onFilterClick = { showFilterSheet = true })
 
-        SearchBar()
-
-        when {
-            uiState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+            when {
+                uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            }
-            uiState.error != null -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(uiState.error ?: "Unknown error occurred", color = Color.Red)
-                }
-            }
-            uiState.messages.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No messages yet")
-                }
-            }
-            else -> {
-                Text("Activities", Modifier.padding(start = 16.dp, top = 8.dp), fontWeight = FontWeight.SemiBold)
 
-                LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    items(uiState.messages) {
-                        StoryAvatar(it.peer)
+                uiState.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    Text(uiState.error ?: "Unknown error", color = Color.Red)
+                }
+
+                else -> {
+                    // Activities
+                    Text(
+                        "Activities",
+                        modifier = Modifier.padding(start = 20.dp, top = 8.dp, end = 20.dp),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    LazyRow(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        items(uiState.messages) { StoryAvatar(it.peer) }
                     }
-                }
 
-                Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                Card(
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    LazyColumn {
-                        items(uiState.messages) { conversation ->
-                            MessageItem(
-                                item = conversation,
-                                onClick = {
-                                    navController.navigate(
-                                        Screen.ChatDetail.createRoute(conversation.id)
-                                    )
-                                }
+                    // White rounded container for the Messages section
+                    MessagesSectionCard(
+                        messages = uiState.messages,
+                        onItemClick = { c ->
+                            navController.navigate(
+                                Screen.ChatDetail.createRoute(c.id)
                             )
-                            Divider()
                         }
+                    )
+                }
+            }
+        }
+
+        // Filter sheet
+        if (showFilterSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showFilterSheet = false },
+                sheetState = sheetState,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                containerColor = Color.White
+            ) {
+                MessagesFilterSheet(
+                    state = filterState,
+                    onChange = { viewModel.updateFilter(it) },
+                    onClear = {
+                        viewModel.clearFilter()
+                        showFilterSheet = false
+                    },
+                    onApply = {
+                        viewModel.applyFilter()
+                        showFilterSheet = false
                     }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessagesSectionCard(
+    messages: List<ConversationPreview>,
+    onItemClick: (ConversationPreview) -> Unit
+) {
+    val cardHPad = 20.dp
+    val avatar = 56.dp
+    val gap = 12.dp
+    val startIndent = cardHPad + avatar + gap
+
+    Card(
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        if (messages.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "No Messages Yet",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "When you match and chat with others,\nyour messages will show up here",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = cardHPad, end = cardHPad, top = 16.dp, bottom = 90.dp
+                )
+            ) {
+                // Header inside the white container
+                item {
+                    Text(
+                        text = "Messages",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                items(messages) { conversation ->
+                    MessageItem(
+                        item = conversation,
+                        onClick = { onItemClick(conversation) }
+                    )
+                    InsetDivider(start = startIndent)
                 }
             }
         }
@@ -117,35 +180,18 @@ fun MessagesScreen(
 }
 
 @Composable
-fun SearchBar() {
-    var query by remember { mutableStateOf("") }
-
-    OutlinedTextField(
-        value = query,
-        onValueChange = { query = it },
-        placeholder = { Text("Search") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
-        singleLine = true,
-        trailingIcon = {
-            if (query.isNotBlank()) {
-                IconButton(onClick = { query = "" }) {
-                    Icon(Icons.Default.Clear, contentDescription = null)
-                }
-            }
-        }
-    )
-}
-
-@Composable
 fun StoryAvatar(user: User) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(8.dp)
+    ) {
         AsyncImage(
             model = user.avatarUrl ?: "https://i.pravatar.cc/150?u=${user.uid}",
             contentDescription = null,
-            modifier = Modifier.size(60.dp).clip(CircleShape).border(2.dp, Color.Magenta, CircleShape)
+            modifier = Modifier
+                .size(60.dp)
+                .clip(CircleShape)
+                .border(2.dp, Color.Magenta, CircleShape)
         )
         Text(user.firstName, fontSize = 12.sp)
     }
@@ -157,7 +203,7 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -167,13 +213,10 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
                 .size(56.dp)
                 .clip(CircleShape)
         )
+
         Spacer(Modifier.width(12.dp))
 
-        Column(
-            Modifier
-                .weight(1f)
-                .padding(end = 8.dp)
-        ) {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = "${item.peer.firstName} ${item.peer.lastName}",
                 style = MaterialTheme.typography.bodyLarge,
@@ -196,4 +239,14 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
             )
         }
     }
+}
+
+/** Divider bắt đầu từ chỗ text (không chạy dưới avatar) */
+@Composable
+fun InsetDivider(start: Dp, modifier: Modifier = Modifier) {
+    Divider(
+        modifier = modifier.padding(start = start),
+        thickness = 0.6.dp,
+        color = Color(0x1A000000) // đen 10% cho nhẹ nhàng
+    )
 }

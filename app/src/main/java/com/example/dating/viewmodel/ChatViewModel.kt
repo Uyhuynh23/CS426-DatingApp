@@ -18,11 +18,37 @@ class ChatViewModel @Inject constructor(
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
 
+    private val _peerName = MutableStateFlow("")
+    val peerName: StateFlow<String> = _peerName
+
+    private val _peerAvatar = MutableStateFlow("")
+    val peerAvatar: StateFlow<String> = _peerAvatar
+
+    fun loadPeer(conversationId: String) {
+        db.collection("conversations")
+            .document(conversationId)
+            .get()
+            .addOnSuccessListener { doc ->
+                val currentUid = auth.currentUser?.uid
+                val participants = doc.get("participants") as? List<String> ?: return@addOnSuccessListener
+                val peerId = participants.find { it != currentUid } ?: return@addOnSuccessListener
+
+                db.collection("users")
+                    .document(peerId)
+                    .get()
+                    .addOnSuccessListener { userDoc ->
+                        _peerName.value = userDoc.getString("name") ?: ""
+                        _peerAvatar.value = userDoc.getString("photoUrl") ?: ""
+                    }
+            }
+    }
+
     fun loadConversation(conversationId: String) {
+        // Load messages
         db.collection("conversations")
             .document(conversationId)
             .collection("messages")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snap, _ ->
                 val list = snap?.documents?.mapNotNull { d ->
                     d.toObject(ChatMessage::class.java)?.copy(id = d.id)

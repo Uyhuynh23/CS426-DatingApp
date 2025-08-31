@@ -55,6 +55,7 @@ dependencies {
     // Hilt core
     implementation("com.google.dagger:hilt-android:2.51.1")
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.firebase.database)
     kapt("com.google.dagger:hilt-compiler:2.51.1")
 
     // Hilt ViewModel cho Compose
@@ -88,4 +89,5 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
+    implementation("androidx.compose.material3:material3:1.1.2")
 }

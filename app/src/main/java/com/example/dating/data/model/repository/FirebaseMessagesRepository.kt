@@ -18,7 +18,12 @@ class FirebaseMessagesRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) {
     fun getConversations(): Flow<List<ConversationPreview>> = callbackFlow {
-        val currentUid = auth.currentUser?.uid ?: return@callbackFlow
+        val currentUid = auth.currentUser?.uid
+        if(currentUid == null) {
+            trySend(emptyList())
+            awaitClose()
+            return@callbackFlow
+        }
         val query = db.collection("conversations")
             .whereArrayContains("participants", currentUid)
             .orderBy("lastTimestamp", Query.Direction.DESCENDING)
