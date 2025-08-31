@@ -134,20 +134,24 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                 is Resource.Success -> {
                     val users = (usersResource as Resource.Success<List<User>>).result
                     // You can use your ProfileCard and ActionButtons here, or a grid like FavoriteScreen
-                    ProfileCard(
-                        profiles = users,
-                        profileIndex = profileIndex,
-                        handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
-                            handleProfileAction(
-                                isLike,
-                                profileIndex,
-                                profiles,
-                                homeViewModel,
-                                navController
-                            )
-                        },
-                        animateSwipe = ::animateSwipe
-                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        ProfileCard(
+                            profiles = users,
+                            profileIndex = profileIndex,
+                            handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                                handleProfileAction(
+                                    isLike,
+                                    profileIndex,
+                                    profiles,
+                                    homeViewModel,
+                                    navController
+                                )
+                            },
+                            animateSwipe = ::animateSwipe,
+                            navController = navController // Pass navController here
+                        )
+                    }
+
                     ActionButtons(
                         profiles = users,
                         profileIndex = profileIndex,
