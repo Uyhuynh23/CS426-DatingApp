@@ -11,6 +11,7 @@ import com.example.dating.data.model.User
 import com.example.dating.data.model.repository.AuthRepository
 import com.example.dating.data.model.repository.UserRepository
 import com.example.dating.data.model.Resource
+import com.google.firebase.storage.FirebaseStorage
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -101,5 +102,23 @@ class ProfileViewModel @Inject constructor(
                 _user.value = user
             }
         }
+    }
+
+    fun uploadAvatar(uri: android.net.Uri) {
+        val uid = auth.currentUser?.uid ?: return
+        val storage = FirebaseStorage.getInstance()
+        val avatarRef = storage.reference.child("avatars/$uid.jpg")
+        avatarRef.putFile(uri)
+            .addOnSuccessListener { taskSnapshot: com.google.firebase.storage.UploadTask.TaskSnapshot ->
+                avatarRef.downloadUrl.addOnSuccessListener { downloadUrl: android.net.Uri ->
+                    viewModelScope.launch {
+                        userRepository.updateAvatarUrl(uid, downloadUrl.toString())
+                        android.util.Log.d("ProfileViewModel", "Avatar updated: $downloadUrl")
+                    }
+                }
+            }
+            .addOnFailureListener { e: Exception ->
+                android.util.Log.e("ProfileViewModel", "Failed to upload avatar: ${e.message}")
+            }
     }
 }
