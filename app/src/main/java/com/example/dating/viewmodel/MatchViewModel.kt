@@ -68,6 +68,4 @@ class MatchViewModel @Inject constructor(
     suspend fun getUserById(id: String): User? {
         return userRepository.getUser(id).first()
     }
-
-
 }

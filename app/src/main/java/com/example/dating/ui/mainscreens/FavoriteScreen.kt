@@ -69,8 +69,36 @@ fun FavoriteScreen(navController: NavController, favoriteViewModel: FavoriteView
                     is Resource.Success -> {
                         val users = (usersState as Resource.Success<List<User>>).result
                         if (users.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                Text("No users found", color = Color.Gray)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = "No matches",
+                                        modifier = Modifier.size(64.dp),
+                                        tint = AppColors.Text_Pink.copy(alpha = 0.6f)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Nobody has liked you yet",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.Gray
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Please check back later!",
+                                        fontSize = 16.sp,
+                                        color = Color.Gray
+                                    )
+                                }
                             }
                         } else {
                             Text("This is a list of people who have liked you.", fontSize = 16.sp, modifier = Modifier.padding(start = 32.dp, top = 8.dp, bottom = 8.dp, end = 16.dp), color = Color.Black)
@@ -107,7 +135,7 @@ fun FavoriteHeader(navController: NavController) {
         }
 
         Text(
-            text = "Matches",
+            text = "Favorites",
             color = Color.Black,
             fontWeight = FontWeight.Bold,
             fontSize = 30.sp
