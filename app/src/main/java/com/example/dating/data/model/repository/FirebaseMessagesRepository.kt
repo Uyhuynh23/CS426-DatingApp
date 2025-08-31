@@ -77,65 +77,12 @@ class FirebaseMessagesRepository @Inject constructor(
     }
 
     suspend fun createConversation(userId1: String, userId2: String) {
-        // First check if a conversation already exists between these users
-        val existingConversation = db.collection("conversations")
-            .whereArrayContains("participants", userId1)
-            .get()
-            .await()
-            .documents
-            .find { doc ->
-                val participants = doc.get("participants") as? List<String>
-                participants?.contains(userId2) == true
-            }
-
-        if (existingConversation != null) {
-            // Conversation already exists, no need to create a new one
-            return
-        }
-
-        // Get user names for the match message
-        val user1Doc = db.collection("users").document(userId1).get().await()
-        val user2Doc = db.collection("users").document(userId2).get().await()
-
-        val user1Name = user1Doc.getString("firstName") ?: "Someone"
-        val user2Name = user2Doc.getString("firstName") ?: "Someone"
-
-        // Create conversation
-        val timestamp = System.currentTimeMillis()
-
-        // Create the conversation document with initial data
         val conversationData = hashMapOf(
             "participants" to listOf(userId1, userId2),
-            "lastMessage" to "You matched with $user2Name!",
-            "lastTimestamp" to timestamp,
-            "unread" to hashMapOf(
-                userId1 to 0,
-                userId2 to 1
-            ),
-            "typing" to hashMapOf(
-                userId1 to false,
-                userId2 to false
-            )
+            "lastMessage" to "",
+            "lastTimestamp" to System.currentTimeMillis(),
+            "unread" to mapOf(userId1 to 0, userId2 to 0)
         )
-
-        val conversationRef = db.collection("conversations").document()
-        val conversationId = conversationRef.id
-
-        // Save the conversation
-        conversationRef.set(conversationData).await()
-
-        // Add the first system message about the match
-        val matchMessage = hashMapOf(
-            "text" to "You matched with $user2Name!",
-            "senderId" to "system",
-            "timestamp" to timestamp,
-            "read" to false
-        )
-
-        db.collection("conversations")
-            .document(conversationId)
-            .collection("messages")
-            .add(matchMessage)
-            .await()
+        db.collection("conversations").add(conversationData).await()
     }
 }

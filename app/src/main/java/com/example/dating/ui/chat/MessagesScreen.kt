@@ -32,8 +32,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.ui.unit.Dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,44 +185,15 @@ fun StoryAvatar(user: User) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(8.dp)
     ) {
-        Box {
-            AsyncImage(
-                model = user.avatarUrl ?: "https://i.pravatar.cc/150?u=${user.uid}",
-                contentDescription = null,
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, AppColors.Text_Pink, CircleShape)
-            )
-
-            // Add a small heart icon to indicate this is a new match
-            if (user.isNewMatch == true) {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 3.dp, y = 3.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .border(1.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Favorite,
-                        contentDescription = "New Match",
-                        tint = AppColors.Text_Pink,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
-
-        Text(
-            text = user.firstName,
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+        AsyncImage(
+            model = user.avatarUrl ?: "https://i.pravatar.cc/150?u=${user.uid}",
+            contentDescription = null,
+            modifier = Modifier
+                .size(60.dp)
+                .clip(CircleShape)
+                .border(2.dp, Color.Magenta, CircleShape)
         )
+        Text(user.firstName, fontSize = 12.sp)
     }
 }
 
