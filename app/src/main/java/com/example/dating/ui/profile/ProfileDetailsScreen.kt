@@ -32,6 +32,7 @@ import com.example.dating.ui.components.DescriptionField
 import com.example.dating.ui.components.BirthdayGenderFields
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.ProfileViewModel
+import com.example.dating.viewmodel.StoryViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -43,18 +44,34 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.Interest
+import com.example.dating.data.model.ALL_INTERESTS
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.ui.focus.onFocusChanged
-
+import android.net.Uri
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDetailsScreen(
     navController: NavController,
-    profileViewModel: ProfileViewModel = hiltViewModel()
+    profileViewModel: ProfileViewModel = hiltViewModel(),
+    storyViewModel: StoryViewModel = hiltViewModel() // <-- Add StoryViewModel
 ) {
     val user by profileViewModel.user.collectAsState()
     val updateState by profileViewModel.updateState.collectAsState()
@@ -98,7 +115,8 @@ fun ProfileDetailsScreen(
                     ProfileContent(
                         navController = navController,
                         initialProfile = it,
-                        profileViewModel = profileViewModel
+                        profileViewModel = profileViewModel,
+                        storyViewModel = storyViewModel // <-- Pass StoryViewModel
                     )
                 }
             }
@@ -109,11 +127,13 @@ fun ProfileDetailsScreen(
 @Composable
 fun ProfileContent(
     navController: NavController,
-    initialProfile: User, // Change type to User
-    profileViewModel: ProfileViewModel
+    initialProfile: User,
+    profileViewModel: ProfileViewModel,
+    storyViewModel: StoryViewModel
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
+    val postState by storyViewModel.postState.collectAsState()
 
     var editableFirstName by remember { mutableStateOf(initialProfile.firstName) }
     var editableLastName by remember { mutableStateOf(initialProfile.lastName) }
@@ -141,24 +161,7 @@ fun ProfileContent(
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
-    val allInterests = remember {
-        listOf(
-            Interest("Photography", R.drawable.ic_interest_photography),
-            Interest("Shopping", R.drawable.ic_interest_shopping),
-            Interest("Karaoke", R.drawable.ic_interest_karaoke),
-            Interest("Yoga", R.drawable.ic_interest_yoga),
-            Interest("Cooking", R.drawable.ic_interest_cooking),
-            Interest("Tennis", R.drawable.ic_interest_tennis),
-            Interest("Run", R.drawable.ic_interest_run),
-            Interest("Swimming", R.drawable.ic_interest_swimming),
-            Interest("Art", R.drawable.ic_interest_art),
-            Interest("Traveling", R.drawable.ic_interest_travelling),
-            Interest("Extreme", R.drawable.ic_interest_extreme),
-            Interest("Music", R.drawable.ic_interest_music),
-            Interest("Drink", R.drawable.ic_interest_drink),
-            Interest("Video games", R.drawable.ic_interest_game)
-        )
-    }
+    val allInterests = remember { ALL_INTERESTS }
 
     LazyColumn(
         modifier = Modifier
@@ -242,7 +245,7 @@ fun ProfileContent(
         item {
             Button(
                 onClick = {
-                    // TODO: Implement add story action
+                    navController.navigate("post_story")
                 },
                 modifier = Modifier
                     .width(180.dp)

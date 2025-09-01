@@ -30,4 +30,5 @@ sealed class Screen(val route: String) {
     object PhotoViewer: Screen("photo_viewer/{startIndex}") {
         fun route(startIndex: Int) = "photo_viewer/$startIndex"
     }
+    object PostStory : Screen("post_story")
 }
