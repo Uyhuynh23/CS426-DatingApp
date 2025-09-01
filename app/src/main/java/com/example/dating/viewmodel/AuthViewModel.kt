@@ -74,33 +74,34 @@ class AuthViewModel @Inject constructor(
         _googleSignInFlow.value = result
     }
 
-    fun initGoogleSignIn(context: Context): GoogleSignInOptions {
+    private fun initGoogleSignIn(context: Context): GoogleSignInOptions {
         return GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("227046142854-vuqvpvateg6m6gev12036jovd462t348.apps.googleusercontent.com") // Web client ID
             .requestEmail()
             .requestProfile()
-            .requestIdToken("224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com")
             .build()
     }
 
     fun performGoogleSignIn(context: Context, onSignInIntent: (android.content.Intent) -> Unit) {
         try {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com")
-                .requestEmail()
-                .requestProfile()
-                .build()
-
+            val gso = initGoogleSignIn(context)
             val googleSignInClient = GoogleSignIn.getClient(context, gso)
 
-            // Clear any previous sign-in and start fresh
+            // Clear any previous sign-in state
             googleSignInClient.signOut().addOnCompleteListener {
-                googleSignInClient.revokeAccess().addOnCompleteListener {
+                try {
                     val signInIntent = googleSignInClient.signInIntent
+                    Log.d("GoogleSignIn", "Launching sign in intent")
                     onSignInIntent(signInIntent)
+                } catch (e: Exception) {
+                    Log.e("GoogleSignIn", "Error creating sign in intent", e)
+                    viewModelScope.launch {
+                        _googleSignInFlow.value = Resource.Failure(e)
+                    }
                 }
             }
         } catch (e: Exception) {
-            Log.e("GoogleSignIn", "Error creating sign-in intent: ${e.message}")
+            Log.e("GoogleSignIn", "Error in performGoogleSignIn", e)
             viewModelScope.launch {
                 _googleSignInFlow.value = Resource.Failure(e)
             }

@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.google.firebase.auth.GoogleAuthProvider
+import android.util.Log
 
 class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth
@@ -57,11 +58,14 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun signupWithGoogle(idToken: String): Resource<FirebaseUser> {
         return try {
+            Log.d("GoogleSignIn", "Starting Google authentication with token length: ${idToken.length}")
             val credential = GoogleAuthProvider.getCredential(idToken, null)
+            Log.d("GoogleSignIn", "Created GoogleAuthCredential, attempting Firebase sign in")
             val result = firebaseAuth.signInWithCredential(credential).await()
+            Log.d("GoogleSignIn", "Firebase authentication successful, user: ${result.user?.email}")
             Resource.Success(result.user!!)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("GoogleSignIn", "Firebase authentication failed", e)
             Resource.Failure(e)
         }
     }

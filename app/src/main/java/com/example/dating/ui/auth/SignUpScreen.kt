@@ -3,6 +3,7 @@ package com.example.dating.ui.auth
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,9 +37,9 @@ import com.example.dating.viewmodel.AuthViewModel
 import com.google.firebase.auth.FirebaseUser
 
 @Composable
-fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
+fun SignUpScreen(viewModel: AuthViewModel = hiltViewModel(), navController: NavController) {
     val context = LocalContext.current
-    val googleSignInState = viewModel?.googleSignInFlow?.collectAsState()
+    val googleSignInState = viewModel.googleSignInFlow.collectAsState()
 
     // Google Sign-In configuration
     val googleSignInLauncher = rememberLauncherForActivityResult(
@@ -47,29 +48,35 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
-            account.idToken?.let { idToken ->
-                Log.d("GoogleSignIn", "ID Token received")
-                viewModel?.signupWithGoogle(idToken)
+            account?.idToken?.let { token ->
+                Log.d("GoogleSignIn", "ID Token received: ${token.take(10)}...")
+                viewModel.signupWithGoogle(token)
             } ?: run {
                 Log.e("GoogleSignIn", "ID Token is null")
+                Toast.makeText(context, "Failed to get Google Sign In token", Toast.LENGTH_SHORT).show()
             }
         } catch (e: ApiException) {
-            Log.e("GoogleSignIn", "Sign in failed with code: ${e.statusCode}, message: ${e.message}")
+            Log.e("GoogleSignIn", "Sign in failed: ${e.message}")
+            Toast.makeText(context, "Google Sign In failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-
     // Observe Google Sign-In state
-    LaunchedEffect(googleSignInState) {
-        when (val state = googleSignInState) {
-            is Resource.Success<FirebaseUser> -> {
+    LaunchedEffect(googleSignInState.value) {
+        when (val state = googleSignInState.value) {
+            is Resource.Success -> {
                 Log.d("GoogleSignIn", "Authentication successful")
-                navController.navigate("home") {
-                    popUpTo("register") { inclusive = true }
+                navController.navigate(Screen.Profile.route) {
+                    popUpTo(Screen.Register.route) { inclusive = true }
                 }
             }
             is Resource.Failure -> {
                 Log.e("GoogleSignIn", "Authentication failed: ${state.exception.message}")
+                Toast.makeText(
+                    context,
+                    "Authentication failed: ${state.exception.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
             is Resource.Loading -> {
                 Log.d("GoogleSignIn", "Authentication in progress...")
@@ -173,7 +180,7 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
                 iconRes = R.drawable.ic_google,
                 contentDescription = "Google",
                 onClick = {
-                    viewModel?.performGoogleSignIn(context) { intent ->
+                    viewModel.performGoogleSignIn(context) { intent ->
                         googleSignInLauncher.launch(intent)
                     }
                 },

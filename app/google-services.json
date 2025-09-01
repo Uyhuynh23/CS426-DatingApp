@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "227046142854",
+    "firebase_url": "https://cs426-dating-app-default-rtdb.firebaseio.com",
     "project_id": "cs426-dating-app",
     "storage_bucket": "cs426-dating-app.firebasestorage.app"
   },
@@ -19,6 +20,22 @@
           "android_info": {
             "package_name": "com.example.dating",
             "certificate_hash": "7545f9f3839bae76077bcd1365623d1a578e19c0"
+          }
+        },
+        {
+          "client_id": "227046142854-m96pjf4dmigtueti7fh2tsbb1410r95r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dating",
+            "certificate_hash": "f64faa831fbdd3f34bdbd86a1c53efd11cc51526"
+          }
+        },
+        {
+          "client_id": "227046142854-nps2e4ri4mcefue5ek4jq2k4soi6sh4d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dating",
+            "certificate_hash": "39ff481d07f75c4623ca7307bf9199d4fca8cc9c"
           }
         },
         {
