@@ -82,12 +82,21 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color.Black)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Current User",
-                            tint = Color.Gray.copy(alpha = 0.4f),
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        if (!currentUserInfo?.avatarUrl.isNullOrBlank()) {
+                            coil.compose.AsyncImage(
+                                model = currentUserInfo?.avatarUrl,
+                                contentDescription = "Current User",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Current User",
+                                tint = Color.Gray.copy(alpha = 0.4f),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     // Lower left profile photo (matched user)
@@ -100,12 +109,21 @@ fun MatchScreen(navController: NavController, matchedUserId: String?) {
                             .clip(RoundedCornerShape(24.dp))
                             .background(Color.Black)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Matched User",
-                            tint = Color.Gray.copy(alpha = 0.4f),
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        if (!matchedUserInfo?.avatarUrl.isNullOrBlank()) {
+                            coil.compose.AsyncImage(
+                                model = matchedUserInfo?.avatarUrl,
+                                contentDescription = "Matched User",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Matched User",
+                                tint = Color.Gray.copy(alpha = 0.4f),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     // Heart for upper right photo

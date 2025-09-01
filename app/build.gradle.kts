@@ -50,8 +50,8 @@ dependencies {
 
     //Country Code Picker
     implementation ("com.hbb20:ccp:2.6.0")
-
     implementation ("com.googlecode.libphonenumber:libphonenumber:8.13.22")
+
     // Hilt core
     implementation("com.google.dagger:hilt-android:2.51.1")
     implementation(libs.androidx.constraintlayout)
@@ -83,6 +83,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-storage:22.0.0")
     implementation(platform("androidx.compose:compose-bom:2024.04.01"))
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

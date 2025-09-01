@@ -1,5 +1,7 @@
 package com.example.dating.ui.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,6 +35,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.Interest
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.CameraAlt
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +48,7 @@ fun ProfileDetailsScreen(
 ) {
     val user by profileViewModel.user.collectAsState()
     val updateState by profileViewModel.updateState.collectAsState()
+
 
     Box(
         modifier = Modifier
@@ -105,6 +112,16 @@ fun ProfileContent(
     var editableJob by remember { mutableStateOf(initialProfile.job ?: "") }
     var editableLocation by remember { mutableStateOf(initialProfile.location ?: "") }
     var editableDescription by remember { mutableStateOf(initialProfile.description ?: "") }
+
+    var selectedImageUrl by remember { mutableStateOf<android.net.Uri?>(null) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        selectedImageUrl = uri
+        if (uri != null) {
+            profileViewModel.uploadAvatar(uri)
+        }
+    }
 
     val selectedInterests = remember {
         initialProfile.interests.toMutableStateList()
@@ -195,50 +212,82 @@ fun ProfileContent(
             }
         }
 
-        // Profile Image
+        // Profile Image & Camera Icon (only clickable in edit mode)
         item {
-            val imageUrl = initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()
-            val imageModifier = Modifier.size(170.dp).padding(vertical = 8.dp)
-            if (!imageUrl.isNullOrBlank()) {
-                Image(
-                    painter = rememberAsyncImagePainter(model = imageUrl, error = painterResource(R.drawable.ic_avatar)),
-                    contentDescription = "Profile Image",
-                    modifier = imageModifier,
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Image(
-                    painter = painterResource(R.drawable.ic_avatar),
-                    contentDescription = "Default Avatar",
-                    modifier = imageModifier,
-                    contentScale = ContentScale.Crop
-                )
+            Box(contentAlignment = Alignment.BottomEnd) {
+                val imageUrl = initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()
+                val imageModifier = Modifier
+                    .size(170.dp)
+                    .padding(vertical = 8.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = isEditMode) { if (isEditMode) imagePickerLauncher.launch("image/*") };
+                if (!imageUrl.isNullOrBlank()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(model = imageUrl, error = painterResource(R.drawable.ic_avatar)),
+                        contentDescription = "Profile Image",
+                        modifier = imageModifier,
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(R.drawable.ic_avatar),
+                        contentDescription = "Default Avatar",
+                        modifier = imageModifier,
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .align(Alignment.BottomEnd)
+                        .clip(CircleShape)
+                        .background(AppColors.Main_Secondary1)
+                        .clickable(enabled = isEditMode) { if (isEditMode) imagePickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Change Photo",
+                        tint = if (isEditMode) AppColors.Main_Primary else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+
         }
 
         // Form Fields
         item {
-            NameFields(firstName = editableFirstName, lastName = editableLastName, isEditMode = isEditMode,
+            NameFields(
+                firstName = editableFirstName, lastName = editableLastName, isEditMode = isEditMode,
                 onFirstNameChange = { editableFirstName = it },
                 onLastNameChange = { editableLastName = it }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            BirthdayGenderFields(birthday = editableBirthday, gender = editableGender, isEditMode = isEditMode,
+            BirthdayGenderFields(
+                birthday = editableBirthday, gender = editableGender, isEditMode = isEditMode,
                 showCalendar = showCalendar,
                 onShowCalendar = { showCalendar = true },
                 onGenderChange = { editableGender = it }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            JobDropdown(job = editableJob, isEditMode = isEditMode, onJobChange = { editableJob = it })
+            JobDropdown(
+                job = editableJob,
+                isEditMode = isEditMode,
+                onJobChange = { editableJob = it })
             Spacer(modifier = Modifier.height(8.dp))
-            LocationField(location = editableLocation, isEditMode = isEditMode,
+            LocationField(
+                location = editableLocation, isEditMode = isEditMode,
                 onLocationChange = { editableLocation = it }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            DescriptionField(description = editableDescription, isEditMode = isEditMode,
+            DescriptionField(
+                description = editableDescription, isEditMode = isEditMode,
                 onDescriptionChange = { editableDescription = it }
             )
         }
+
 
         // Interests Section
         item {

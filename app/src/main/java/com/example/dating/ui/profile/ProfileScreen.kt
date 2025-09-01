@@ -51,6 +51,9 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hi
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         selectedImageUrl = uri
+        if (uri != null) {
+            viewModel.uploadAvatar(uri)
+        }
     }
 
     Column(

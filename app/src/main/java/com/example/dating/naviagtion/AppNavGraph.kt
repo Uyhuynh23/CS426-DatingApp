@@ -36,11 +36,11 @@ import androidx.navigation.compose.navigation
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.ui.profile.UserProfileScreen
 import com.example.dating.ui.profile.PhotoViewerScreen
+import com.example.dating.viewmodel.MessagesViewModel
+import com.example.dating.viewmodel.ChatViewModel
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
-    val authViewModel = hiltViewModel<AuthViewModel>()
-    val messageViewModel = hiltViewModel<com.example.dating.viewmodel.MessagesViewModel>()
 
     NavHost(
         navController = navController,
@@ -133,21 +133,30 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 }
             }
 
-            composable(Screen.Messages.route) {
+            composable(Screen.Messages.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("root_graph")
+                }
+                val messageViewModel: MessagesViewModel = hiltViewModel(parentEntry)
                 MessagesScreen(navController, viewModel = messageViewModel)
             }
 
+            // Chat detail screen
             composable(
-                route = Screen.ChatDetail.route,
-                arguments = listOf(
-                    navArgument("conversationId") {
-                        type = NavType.StringType
-                        nullable = false
-                    }
-                )
+                route = "chat_detail/{conversationId}",
+                arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val conversationId = backStackEntry.arguments?.getString("conversationId")!!
-                ChatDetailScreen(conversationId = conversationId, navController = navController)
+
+                // Scope ChatViewModel theo root_graph
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("root_graph") }
+                val chatViewModel: ChatViewModel = hiltViewModel(parentEntry)
+
+                ChatDetailScreen(
+                    conversationId = conversationId,
+                    navController = navController,
+                    viewModel = chatViewModel
+                )
             }
 
             composable(

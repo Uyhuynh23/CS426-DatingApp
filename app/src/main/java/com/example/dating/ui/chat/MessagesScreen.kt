@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -199,6 +200,7 @@ fun StoryAvatar(user: User) {
 
 @Composable
 fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
+    android.util.Log.d("MessageItem", item.toString())
     Row(
         Modifier
             .fillMaxWidth()
@@ -222,8 +224,14 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold
             )
+            val senderName = when (item.lastMessage?.fromUid) {
+                null -> ""
+                item.currentUid -> "You"
+                else -> "${item.peer.firstName} ${item.peer.lastName}"
+            }
+            val messageText = item.lastMessage?.text?.takeIf { it.isNotBlank() } ?: "No messages yet"
             Text(
-                text = if (item.lastMessage.isNotEmpty()) item.lastMessage else "No messages yet",
+                text = if (item.lastMessage != null) "$senderName: $messageText" else messageText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 maxLines = 1,
@@ -250,3 +258,4 @@ fun InsetDivider(start: Dp, modifier: Modifier = Modifier) {
         color = Color(0x1A000000) // đen 10% cho nhẹ nhàng
     )
 }
+
