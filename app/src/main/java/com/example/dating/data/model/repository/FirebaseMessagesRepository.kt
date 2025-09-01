@@ -2,6 +2,7 @@ package com.example.dating.data.model.repository
 
 import com.example.dating.data.model.ConversationPreview
 import com.example.dating.data.model.User
+import com.example.dating.data.model.MessagePreview
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -43,31 +44,43 @@ class FirebaseMessagesRepository @Inject constructor(
             val tasks = snapshot.documents.filter { doc ->
                 doc.exists() && doc.data != null
             }
-            .map { doc ->
-                val data = doc.data!!
-                val cid = doc.id
-                val participants = data["participants"] as List<String>
-                val peerUid = participants.first { it != currentUid }
+                .map { doc ->
+                    val data = doc.data!!
+                    val cid = doc.id
+                    val participants = data["participants"] as List<String>
+                    val peerUid = participants.first { it != currentUid }
 
-                val userTask = db.collection("users").document(peerUid).get()
+                    val userTask = db.collection("users").document(peerUid).get()
 
-                userTask.continueWith { userSnap ->
-                    val user = userSnap.result?.toObject(User::class.java) ?: User(uid = peerUid)
-                    val lastMessage = data["lastMessage"] as? String ?: ""
-                    val timestamp = (data["lastTimestamp"] as? Timestamp)?.toDate()?.time ?: 0L
-                    val unread = (data["unread"] as? Map<*, *>)?.get(currentUid) as? Long ?: 0L
-                    val typing = (data["typing"] as? Map<*, *>)?.get(peerUid) as? Boolean ?: false
+                    userTask.continueWith { userSnap ->
+                        val user = userSnap.result?.toObject(User::class.java) ?: User(uid = peerUid)
+                        val lastMessage = (data["lastMessage"] as? Map<*, *>)?.let { msgMap ->
+                            MessagePreview(
+                                fromUid = msgMap["fromUid"] as? String ?: "",
+                                text = msgMap["text"] as? String ?: "",
+                                timestamp = (msgMap["timestamp"] as? Number)?.toLong() ?: 0L
+                            )
+                        }
+                        val timestamp = when(val t = data["lastTimestamp"]) {
+                            is Number -> t.toLong()
+                            is Timestamp -> t.toDate().time
+                            else -> 0L
+                        }
+                        val unread = (data["unread"] as? Map<*, *>)?.get(currentUid) as? Long ?: 0L
+                        val typing = (data["typing"] as? Map<*, *>)?.get(peerUid) as? Boolean ?: false
 
-                    ConversationPreview(
-                        id = cid,
-                        peer = user,
-                        lastMessage = lastMessage,
-                        timeAgo = formatTimeAgo(timestamp),
-                        unreadCount = unread.toInt(),
-                        isTyping = typing
-                    )
+                        ConversationPreview(
+                            currentUid = currentUid,
+                            id = cid,
+                            peer = user,
+                            lastMessage = lastMessage,
+                            lastMessageTimestamp = timestamp,
+                            timeAgo = formatTimeAgo(timestamp),
+                            unreadCount = unread.toInt(),
+                            isTyping = typing
+                        )
+                    }
                 }
-            }
 
             Tasks.whenAllSuccess<ConversationPreview>(tasks)
                 .addOnSuccessListener { result -> trySend(result) }
@@ -77,13 +90,29 @@ class FirebaseMessagesRepository @Inject constructor(
     }
 
     private fun formatTimeAgo(ms: Long): String {
-        val min = ((System.currentTimeMillis() - ms) / 60000)
+        val now = System.currentTimeMillis()
+        android.util.Log.d("formatTimeAgo", "now: $now, ms: $ms")
+        val diff = now - ms
+
+        val seconds = diff / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+        val days = hours / 24
+        val weeks = days / 7
+        val months = days / 30
+        val years = days / 365
+
         return when {
-            min < 1 -> "Just now"
-            min < 60 -> "$min min"
-            else -> "${min / 60} hour"
+            seconds < 60 -> "Just now"
+            minutes < 60 -> "$minutes min"
+            hours < 24 -> "$hours hour${if (hours > 1) "s" else ""}"
+            days < 7 -> "$days day${if (days > 1) "s" else ""}"
+            weeks < 4 -> "$weeks week${if (weeks > 1) "s" else ""}"
+            months < 12 -> "$months month${if (months > 1) "s" else ""}"
+            else -> "$years year${if (years > 1) "s" else ""}"
         }
     }
+
 
     suspend fun createConversation(userId1: String, userId2: String) {
         // Check for existing conversation with both participants

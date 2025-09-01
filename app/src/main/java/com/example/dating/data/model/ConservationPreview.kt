@@ -7,6 +7,7 @@ data class MessagePreview(
 )
 
 data class ConversationPreview(
+    val currentUid: String = "",
     val id: String = "",
     val peer: User = User(),
     val lastMessage: MessagePreview? = null,
