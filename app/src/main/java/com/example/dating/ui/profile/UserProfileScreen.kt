@@ -110,9 +110,17 @@ private fun UserProfileContent(
     // ====== Safe values + defaults
     val name = listOf(user.firstName, user.lastName)
         .filter { it.isNotBlank() }.joinToString(" ").ifBlank { "Jessica Parker" }
-    val ageText = user.birthday?.split("-")?.firstOrNull()?.toIntOrNull()?.let {
-        ", " + (java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - it)
-    } ?: ", 23"
+    val ageText = user.birthday?.let {
+        // Try to parse year from yyyy-MM-dd or dd/MM/yyyy or MM/dd/yyyy
+        val year = when {
+            it.contains("-") -> it.split("-").firstOrNull()?.toIntOrNull() // yyyy-MM-dd
+            it.contains("/") -> it.split("/").lastOrNull()?.toIntOrNull() // dd/MM/yyyy or MM/dd/yyyy
+            else -> null
+        }
+        year?.let { birthYear ->
+            ", " + (java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - birthYear)
+        } ?: ", ?"
+    } ?: ", ?"
     val job = user.job ?: "Professional model"
     val location = user.location ?: "Chicago, IL, United States"
     val about = user.description ?: "My name is $name and I enjoy meeting new people and finding ways to help them have an uplifting experience. I enjoy reading..."
