@@ -4,6 +4,8 @@ import com.example.dating.data.model.repository.AuthRepository
 import com.example.dating.data.model.repository.AuthRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,5 +27,15 @@ object AppModule {
     @Singleton
     fun providesAuthRepository(impl: AuthRepositoryImpl): AuthRepository = impl
 
+    @Provides
+    @Singleton
+    fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
 
+    @Provides @Singleton
+    fun provideStoryRepository(
+        firestore: com.google.firebase.firestore.FirebaseFirestore,
+        storage: com.google.firebase.storage.FirebaseStorage,
+        auth: com.google.firebase.auth.FirebaseAuth
+    ): com.example.dating.data.model.repository.StoryRepository =
+        com.example.dating.data.model.repository.FirebaseStoryRepository(firestore, storage, auth)
 }

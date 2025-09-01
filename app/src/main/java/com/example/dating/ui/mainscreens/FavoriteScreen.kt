@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -151,21 +152,38 @@ fun ProfileGrid(
                                 .weight(1f)
                                 .height(220.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(Color(0xFF23222B))
                                 .clickable {
                                     navController.navigate("profile_display/${profile.uid}")
                                 }
                         ) {
-                            // Profile image placeholder
-                            Image(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Profile",
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .align(Alignment.TopCenter)
-                                    .clip(CircleShape)
-                                    .background(Color.Gray)
-                            )
+                            if (profile.avatarUrl != null && profile.avatarUrl.isNotBlank()) {
+                                Image(
+                                    painter = coil.compose.rememberAsyncImagePainter(model = profile.avatarUrl),
+                                    contentDescription = "Profile Background",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .clip(RoundedCornerShape(24.dp))
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color(0xFF23222B))
+                                        .clip(RoundedCornerShape(24.dp))
+                                ) {
+                                    Image(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Profile",
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .align(Alignment.TopCenter)
+                                            .clip(CircleShape)
+                                            .background(Color.Gray)
+                                    )
+                                }
+                            }
+
                             // Name, Age, Description
                             val name = (profile.firstName + " " + profile.lastName).trim().ifEmpty { "Unknown" }
                             val birthday = profile.birthday

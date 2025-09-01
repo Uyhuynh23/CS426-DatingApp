@@ -24,8 +24,8 @@ data class MessagesUiState(
 
 @HiltViewModel
 class MessagesViewModel @Inject constructor(
-    private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val repository: FirebaseMessagesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MessagesUiState())
@@ -37,6 +37,7 @@ class MessagesViewModel @Inject constructor(
     private var originalMessages = listOf<ConversationPreview>()
     private var loadedConversations = 0
     private var totalConversations = 0
+
 
     init {
         loadMessages()
@@ -58,86 +59,16 @@ class MessagesViewModel @Inject constructor(
 
     private fun loadMessages() {
         _uiState.value = MessagesUiState(isLoading = true)
-        val uid = auth.currentUser?.uid ?: return
-        android.util.Log.d("MessagesViewModel", "Loading messages for uid: $uid")
-        db.collection("conversations")
-            .whereArrayContains("participants", uid)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                android.util.Log.d("MessagesViewModel", "Conversations snapshot size: ${snapshot.size()}")
-                if (snapshot.isEmpty) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        messages = emptyList()
-                    )
-                    android.util.Log.d("MessagesViewModel", "No conversations found.")
-                    return@addOnSuccessListener
-                }
-
-                totalConversations = snapshot.size()
-                loadedConversations = 0
-                val conversations = mutableListOf<ConversationPreview>()
-
-                snapshot.documents.forEach { doc ->
-                    val participants = doc.get("participants") as? List<String> ?: return@forEach
-                    val peerId = participants.find { it != uid } ?: return@forEach
-                    android.util.Log.d("MessagesViewModel", "Conversation doc: ${doc.id}, participants: $participants, peerId: $peerId")
-
-                    // Load peer info
-                    db.collection("users")
-                        .document(peerId)
-                        .get()
-                        .addOnSuccessListener { userDoc ->
-                            val peer = User(
-                                uid = peerId,
-                                firstName = userDoc.getString("firstName") ?: "",
-                                lastName = userDoc.getString("lastName") ?: "",
-                                avatarUrl = userDoc.getString("avatarUrl"),
-                                isOnline = userDoc.getBoolean("isOnline") ?: false
-                            )
-                            android.util.Log.d("MessagesViewModel", "Loaded peer: $peer")
-
-                            // Get last message
-                            db.collection("conversations")
-                                .document(doc.id)
-                                .collection("messages")
-                                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                                .limit(1)
-                                .get()
-                                .addOnSuccessListener { msgSnap ->
-                                    val lastMsg = msgSnap.documents.firstOrNull()
-                                    android.util.Log.d("MessagesViewModel", "Last message: ${lastMsg?.getString("text")}, timestamp: ${lastMsg?.getLong("timestamp")}")
-                                    val preview = ConversationPreview(
-                                        id = doc.id,
-                                        peer = peer,
-                                        lastMessage = lastMsg?.getString("text") ?: "",
-                                        lastMessageTimestamp = lastMsg?.getLong("timestamp") ?: System.currentTimeMillis(),
-                                        timeAgo = formatTimeAgo(lastMsg?.getLong("timestamp") ?: System.currentTimeMillis()),
-                                        unreadCount = doc.getLong("unreadCount")?.toInt() ?: 0
-                                    )
-                                    conversations.add(preview)
-
-                                    loadedConversations++
-                                    android.util.Log.d("MessagesViewModel", "Loaded $loadedConversations/$totalConversations conversations.")
-                                    if (loadedConversations == totalConversations) {
-                                        originalMessages = conversations.sortedByDescending { it.lastMessageTimestamp }
-                                        android.util.Log.d("MessagesViewModel", "Final loaded messages: $originalMessages")
-                                        _uiState.value = _uiState.value.copy(
-                                            isLoading = false,
-                                            messages = originalMessages
-                                        )
-                                    }
-                                }
-                        }
-                }
-            }
-            .addOnFailureListener { e ->
-                android.util.Log.e("MessagesViewModel", "Failed to load messages: ${e.message}")
+        val currentUid = auth.currentUser?.uid ?: ""
+        viewModelScope.launch {
+            repository.getConversations(currentUid).collect { conversations ->
+                originalMessages = conversations.sortedByDescending { it.lastMessageTimestamp }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message
+                    messages = originalMessages
                 )
             }
+        }
     }
 
     private fun formatTimeAgo(timestamp: Long): String {

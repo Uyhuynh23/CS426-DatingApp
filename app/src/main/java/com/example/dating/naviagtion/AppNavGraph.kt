@@ -2,6 +2,7 @@ package com.example.dating.navigation
 
 import LoginScreen
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -36,11 +37,13 @@ import androidx.navigation.compose.navigation
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.ui.profile.UserProfileScreen
 import com.example.dating.ui.profile.PhotoViewerScreen
+import com.example.dating.viewmodel.MessagesViewModel
+import com.example.dating.viewmodel.ChatViewModel
+import com.example.dating.ui.profile.PostStoryScreen
+import com.example.dating.viewmodel.StoryViewModel
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
-    val authViewModel = hiltViewModel<AuthViewModel>()
-    val messageViewModel = hiltViewModel<com.example.dating.viewmodel.MessagesViewModel>()
 
     NavHost(
         navController = navController,
@@ -71,6 +74,19 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 }
                 val profileViewModel: ProfileViewModel = hiltViewModel(parentEntry)
                 ProfileDetailsScreen(navController = navController, profileViewModel)
+            }
+
+            // Add this composable for posting story
+            composable("post_story") {
+                val storyViewModel: StoryViewModel = hiltViewModel()
+                val nav = navController
+                val postState = storyViewModel.postState.collectAsState().value
+                PostStoryScreen(
+                    navController = nav,
+                    postState = postState,
+                    onPost = { caption, uris -> storyViewModel.postStories(caption, uris) },
+                    onClearState = { storyViewModel.clearPostState() }
+                )
             }
 
             composable(Screen.EmailScreen.route) {
@@ -133,21 +149,30 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 }
             }
 
-            composable(Screen.Messages.route) {
+            composable(Screen.Messages.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("root_graph")
+                }
+                val messageViewModel: MessagesViewModel = hiltViewModel(parentEntry)
                 MessagesScreen(navController, viewModel = messageViewModel)
             }
 
+            // Chat detail screen
             composable(
-                route = Screen.ChatDetail.route,
-                arguments = listOf(
-                    navArgument("conversationId") {
-                        type = NavType.StringType
-                        nullable = false
-                    }
-                )
+                route = "chat_detail/{conversationId}",
+                arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val conversationId = backStackEntry.arguments?.getString("conversationId")!!
-                ChatDetailScreen(conversationId = conversationId, navController = navController)
+
+                // Scope ChatViewModel theo root_graph
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("root_graph") }
+                val chatViewModel: ChatViewModel = hiltViewModel(parentEntry)
+
+                ChatDetailScreen(
+                    conversationId = conversationId,
+                    navController = navController,
+                    viewModel = chatViewModel
+                )
             }
 
             composable(
@@ -174,6 +199,15 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                     images = images,
                     startIndex = startIndex
                 )
+            }
+
+            // Add this composable for viewing stories
+            composable(
+                route = "story_viewer/{uid}",
+                arguments = listOf(navArgument("uid") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val uid = backStackEntry.arguments?.getString("uid") ?: return@composable
+                com.example.dating.ui.story.StoryViewerScreen(uid = uid, navController = navController)
             }
         }
     }

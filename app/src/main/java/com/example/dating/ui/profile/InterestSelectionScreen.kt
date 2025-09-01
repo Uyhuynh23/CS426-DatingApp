@@ -27,25 +27,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.Interest
+import com.example.dating.data.model.ALL_INTERESTS
 
 @Composable
 fun InterestSelectionScreen(navController: NavController) {
-    val interests = listOf(
-        Interest("Photography", R.drawable.ic_interest_photography),
-        Interest("Shopping", R.drawable.ic_interest_shopping),
-        Interest("Karaoke", R.drawable.ic_interest_karaoke),
-        Interest("Yoga", R.drawable.ic_interest_yoga),
-        Interest("Cooking", R.drawable.ic_interest_cooking),
-        Interest("Tennis", R.drawable.ic_interest_tennis),
-        Interest("Run", R.drawable.ic_interest_run),
-        Interest("Swimming", R.drawable.ic_interest_swimming),
-        Interest("Art", R.drawable.ic_interest_art),
-        Interest("Traveling", R.drawable.ic_interest_travelling),
-        Interest("Extreme", R.drawable.ic_interest_extreme),
-        Interest("Music", R.drawable.ic_interest_music),
-        Interest("Drink", R.drawable.ic_interest_drink),
-        Interest("Video games", R.drawable.ic_interest_game)
-    )
+    val interests = ALL_INTERESTS
 
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val user by profileViewModel.user.collectAsState()

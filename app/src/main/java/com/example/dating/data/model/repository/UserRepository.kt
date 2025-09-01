@@ -87,4 +87,10 @@ class UserRepository @Inject constructor(
             Resource.Failure(e)
         }
     }
+
+    suspend fun updateAvatarUrl(uid: String, avatarUrl: String) {
+        firestore.collection("users").document(uid)
+            .update("avatarUrl", avatarUrl)
+            .await()
+    }
 }
