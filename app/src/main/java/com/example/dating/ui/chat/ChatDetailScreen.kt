@@ -47,7 +47,7 @@ private val Subtle = Color(0xFF9A9AA0)
 fun ChatDetailScreen(
     conversationId: String,
     navController: NavController,
-    viewModel: ChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel
 ) {
     val messages by viewModel.messages.collectAsState()
     val peerName by viewModel.peerName.collectAsState(initial = "Grace")
