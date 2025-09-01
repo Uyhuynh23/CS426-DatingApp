@@ -13,84 +13,84 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import android.util.Log
+import kotlinx.coroutines.launch
 
 class FirebaseMessagesRepository @Inject constructor(
     private val db: FirebaseFirestore
 ) {
     fun getConversations(currentUid: String): Flow<List<ConversationPreview>> = callbackFlow {
-        if(currentUid.isBlank()) {
+        if (currentUid.isBlank()) {
             trySend(emptyList())
-            awaitClose()
+            awaitClose { }
             return@callbackFlow
         }
+
         val query = db.collection("conversations")
             .whereArrayContains("participants", currentUid)
             .orderBy("lastTimestamp", Query.Direction.DESCENDING)
 
-        Log.d("FirebaseMessagesRepository", "Firestore query: participants contains $currentUid, ordered by lastTimestamp DESC")
-
-        val listener = query.addSnapshotListener { snapshot, _ ->
-            if (snapshot == null ) {
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("FirebaseMessagesRepo", "Error snapshotListener", error)
                 trySend(emptyList())
-                Log.w("Firestore", "Snapshot is null")
                 return@addSnapshotListener
             }
-            Log.d("FirebaseMessagesRepository", "Query result count: ${snapshot.documents.size}")
-            snapshot.documents.forEach { doc ->
-                Log.d(
-                    "FirebaseMessagesRepository",
-                    "Conversation doc: ${doc.id}, exists: ${doc.exists()}, fromCache: ${doc.metadata.isFromCache}, hasPendingWrites: ${doc.metadata.hasPendingWrites()}, data: ${doc.data}"
-                )
+            if (snapshot == null) {
+                Log.w("FirebaseMessagesRepo", "Snapshot null")
+                trySend(emptyList())
+                return@addSnapshotListener
             }
 
-            val tasks = snapshot.documents.filter { doc ->
-                doc.exists() && doc.data != null
-            }
-                .map { doc ->
-                    val data = doc.data!!
+            Log.d("FirebaseMessagesRepo", "Snapshot updated, count=${snapshot.size()}")
+
+            // Launch coroutine to fetch peer users
+            kotlinx.coroutines.GlobalScope.launch {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
                     val cid = doc.id
-                    val participants = data["participants"] as List<String>
-                    val peerUid = participants.first { it != currentUid }
+                    val participants = data["participants"] as? List<String> ?: return@mapNotNull null
+                    val peerUid = participants.firstOrNull { it != currentUid } ?: return@mapNotNull null
 
-                    val userTask = db.collection("users").document(peerUid).get()
+                    val userSnap = db.collection("users").document(peerUid).get().await()
+                    val user = userSnap.toObject(User::class.java) ?: User(uid = peerUid)
 
-                    userTask.continueWith { userSnap ->
-                        val user = userSnap.result?.toObject(User::class.java) ?: User(uid = peerUid)
-                        val lastMessage = (data["lastMessage"] as? Map<*, *>)?.let { msgMap ->
-                            MessagePreview(
-                                fromUid = msgMap["fromUid"] as? String ?: "",
-                                text = msgMap["text"] as? String ?: "",
-                                timestamp = (msgMap["timestamp"] as? Number)?.toLong() ?: 0L
-                            )
-                        }
-                        val timestamp = when(val t = data["lastTimestamp"]) {
-                            is Number -> t.toLong()
-                            is Timestamp -> t.toDate().time
-                            else -> 0L
-                        }
-                        val unread = (data["unread"] as? Map<*, *>)?.get(currentUid) as? Long ?: 0L
-                        val typing = (data["typing"] as? Map<*, *>)?.get(peerUid) as? Boolean ?: false
-
-                        ConversationPreview(
-                            currentUid = currentUid,
-                            id = cid,
-                            peer = user,
-                            lastMessage = lastMessage,
-                            lastMessageTimestamp = timestamp,
-                            timeAgo = formatTimeAgo(timestamp),
-                            unreadCount = unread.toInt(),
-                            isTyping = typing
+                    val lastMessage = (data["lastMessage"] as? Map<*, *>)?.let { msgMap ->
+                        MessagePreview(
+                            fromUid = msgMap["fromUid"] as? String ?: "",
+                            text = msgMap["text"] as? String ?: "",
+                            timestamp = (msgMap["timestamp"] as? Number)?.toLong() ?: 0L
                         )
                     }
+
+                    val timestamp = when(val t = data["lastTimestamp"]) {
+                        is Number -> t.toLong()
+                        is Timestamp -> t.toDate().time
+                        else -> 0L
+                    }
+
+                    val unread = (data["unread"] as? Map<*, *>)?.get(currentUid) as? Long ?: 0L
+                    val typing = (data["typing"] as? Map<*, *>)?.get(peerUid) as? Boolean ?: false
+
+                    ConversationPreview(
+                        currentUid = currentUid,
+                        id = cid,
+                        peer = user,
+                        lastMessage = lastMessage,
+                        lastMessageTimestamp = timestamp,
+                        timeAgo = formatTimeAgo(timestamp),
+                        unreadCount = unread.toInt(),
+                        isTyping = typing
+                    )
                 }
 
-            Tasks.whenAllSuccess<ConversationPreview>(tasks)
-                .addOnSuccessListener { result -> trySend(result) }
-                .addOnFailureListener { trySend(emptyList()) }
+                Log.d("FirebaseMessagesRepo", "Emitting conversations, count=${list.size}")
+                trySend(list)
+            }
         }
 
         awaitClose { listener.remove() }
     }
+
 
     private fun formatTimeAgo(ms: Long): String {
         val now = System.currentTimeMillis()

@@ -38,6 +38,7 @@ import com.example.dating.ui.components.BottomNavigationBar
 fun FavoriteScreen(navController: NavController, favoriteViewModel: FavoriteViewModel = hiltViewModel()) {
     val usersState by favoriteViewModel.usersState.collectAsState()
 
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar(navController, 1)

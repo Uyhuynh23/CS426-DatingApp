@@ -7,12 +7,14 @@ import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.onEach
 
 @HiltViewModel
 class FavoriteViewModel @Inject constructor(
@@ -24,34 +26,15 @@ class FavoriteViewModel @Inject constructor(
     val usersState: StateFlow<Resource<List<User>>> = _usersState
 
     init {
-        fetchFavorites()
-    }
-
-    fun fetchFavorites() {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        android.util.Log.d("FavoriteViewModel", "currentUserId: $currentUserId")
-
-        viewModelScope.launch {
-            try {
-                _usersState.value = Resource.Loading
-
-                // Get list of users who liked me
-                val likedMeSnapshot = favoriteRepository.getFavoritesByLikedId(currentUserId)
-                val likedMeIds = likedMeSnapshot.mapNotNull { it["likerId"] as? String }
-                android.util.Log.d("FavoriteViewModel", "likedMeIds: $likedMeIds")
-
-                // If empty, return immediately
-                if (likedMeIds.isEmpty()) {
-                    _usersState.value = Resource.Success(emptyList())
-                    return@launch
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        if (currentUserId != null) {
+            viewModelScope.launch {
+                favoriteRepository.listenFavorites(currentUserId).collect { users ->
+                    _usersState.value = Resource.Success(users)
                 }
-
-                // Fetch user profiles
-                val users = getUserProfilesByIds(likedMeIds)
-                _usersState.value = Resource.Success(users)
-            } catch (e: Exception) {
-                _usersState.value = Resource.Failure(e)
             }
+        } else {
+            _usersState.value = Resource.Failure(Exception("User not authenticated"))
         }
     }
 
