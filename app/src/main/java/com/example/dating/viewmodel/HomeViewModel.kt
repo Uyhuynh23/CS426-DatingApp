@@ -18,7 +18,6 @@ import com.example.dating.data.model.Resource
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val matchRepository: MatchRepository,
     private val favoriteRepository: FavoriteRepository,
     private val homeRepository: HomeRepository
 ) : ViewModel() {
@@ -78,11 +77,9 @@ class HomeViewModel @Inject constructor(
                 if (isMatch) {
                     _matchFoundUserId.value = likedId
                     android.util.Log.d("HomeViewModel", "Calling MatchRepository.saveMatch with $likerId and $likedId")
-                    matchRepository.saveMatch(likerId, likedId, true)
                 } else {
                     _matchFoundUserId.value = null
                     android.util.Log.d("HomeViewModel", "Calling MatchRepository.saveMatch with $likerId and $likedId, status=false")
-                    matchRepository.saveMatch(likerId, likedId, false)
                 }
             } catch (e: Exception) {
                 _usersState.value = Resource.Failure(e as? Exception ?: Exception(e.message))

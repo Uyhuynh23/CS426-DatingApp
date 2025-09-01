@@ -36,11 +36,10 @@ import androidx.navigation.compose.navigation
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.ui.profile.UserProfileScreen
 import com.example.dating.ui.profile.PhotoViewerScreen
+import com.example.dating.viewmodel.MessagesViewModel
 
 @Composable
 fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel = hiltViewModel()) {
-    val authViewModel = hiltViewModel<AuthViewModel>()
-    val messageViewModel = hiltViewModel<com.example.dating.viewmodel.MessagesViewModel>()
 
     NavHost(
         navController = navController,
@@ -133,7 +132,11 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 }
             }
 
-            composable(Screen.Messages.route) {
+            composable(Screen.Messages.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("root_graph")
+                }
+                val messageViewModel: MessagesViewModel = hiltViewModel(parentEntry)
                 MessagesScreen(navController, viewModel = messageViewModel)
             }
 
