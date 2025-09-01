@@ -28,6 +28,7 @@ import com.example.dating.navigation.Screen
 import com.example.dating.ui.components.*
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.MessagesViewModel
+import com.example.dating.viewmodel.StoryViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -38,7 +39,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun MessagesScreen(
     navController: NavController,
-    viewModel: MessagesViewModel = hiltViewModel()
+    viewModel: MessagesViewModel = hiltViewModel(),
+    storyViewModel: StoryViewModel = hiltViewModel() // <-- Add StoryViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
@@ -74,7 +76,13 @@ fun MessagesScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
-                        items(uiState.messages) { StoryAvatar(it.peer) }
+                        items(uiState.messages) { conversation ->
+                            StoryBubble(
+                                user = conversation.peer,
+                                navController = navController,
+                                storyViewModel = storyViewModel
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -181,10 +189,25 @@ private fun MessagesSectionCard(
 }
 
 @Composable
-fun StoryAvatar(user: User) {
+fun StoryBubble(
+    user: User,
+    navController: NavController,
+    storyViewModel: StoryViewModel
+) {
+    val storiesStateFlow = remember { storyViewModel.observeUserStories(user.uid) }
+    val stories by storiesStateFlow.collectAsState()
+    val hasStory = stories.any { it.expiresAt ?: 0 > System.currentTimeMillis() }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(8.dp)
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable(enabled = hasStory) {
+                if (hasStory) {
+                    // Use navController.navigate with a defined Screen route for story viewing
+                    navController.navigate("story_viewer/${user.uid}")
+                }
+            }
     ) {
         AsyncImage(
             model = user.avatarUrl ?: "https://i.pravatar.cc/150?u=${user.uid}",
@@ -192,7 +215,11 @@ fun StoryAvatar(user: User) {
             modifier = Modifier
                 .size(60.dp)
                 .clip(CircleShape)
-                .border(2.dp, Color.Magenta, CircleShape)
+                .border(
+                    3.dp,
+                    if (hasStory) AppColors.Text_Pink else Color.LightGray,
+                    CircleShape
+                )
         )
         Text(user.firstName, fontSize = 12.sp)
     }
@@ -259,3 +286,10 @@ fun InsetDivider(start: Dp, modifier: Modifier = Modifier) {
     )
 }
 
+/** In StoryViewModel.kt, add:
+@Composable
+fun StoryViewModel.observeUserStories(uid: String): State<List<com.example.dating.data.model.Story>> {
+    val flow = repo.observeMyStories(uid)
+    return flow.collectAsState(initial = emptyList())
+}
+*/
