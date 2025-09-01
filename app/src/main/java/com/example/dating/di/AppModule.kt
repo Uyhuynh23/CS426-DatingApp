@@ -30,4 +30,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+
+    @Provides @Singleton
+    fun provideStoryRepository(
+        firestore: com.google.firebase.firestore.FirebaseFirestore,
+        storage: com.google.firebase.storage.FirebaseStorage,
+        auth: com.google.firebase.auth.FirebaseAuth
+    ): com.example.dating.data.model.repository.StoryRepository =
+        com.example.dating.data.model.repository.FirebaseStoryRepository(firestore, storage, auth)
 }

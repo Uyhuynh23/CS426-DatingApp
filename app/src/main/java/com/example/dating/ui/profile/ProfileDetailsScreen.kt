@@ -5,6 +5,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -23,10 +24,17 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.dating.R
 import com.example.dating.ui.components.CustomCalendarDialog
+import com.example.dating.ui.components.InterestsSection
+import com.example.dating.ui.components.JobDropdown
+import com.example.dating.ui.components.LocationField
+import com.example.dating.ui.components.NameFields
+import com.example.dating.ui.components.DescriptionField
+import com.example.dating.ui.components.BirthdayGenderFields
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.ProfileViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
@@ -37,7 +45,9 @@ import com.example.dating.data.model.Resource
 import com.example.dating.data.model.Interest
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.ui.focus.onFocusChanged
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,6 +123,7 @@ fun ProfileContent(
     var editableLocation by remember { mutableStateOf(initialProfile.location ?: "") }
     var editableDescription by remember { mutableStateOf(initialProfile.description ?: "") }
 
+    // Image picker launcher for avatar
     var selectedImageUrl by remember { mutableStateOf<android.net.Uri?>(null) }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -150,163 +161,214 @@ fun ProfileContent(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Bar: Back Button and Edit/Done Button
+        // Header: Back Arrow only
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, start = 8.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink)
-                }
-                TextButton(onClick = {
-                    if (isEditMode) {
-                        isSaving = true
-                        saveError = null
-                        val user = User(
-                            uid = initialProfile.uid,
-                            firstName = editableFirstName,
-                            lastName = editableLastName,
-                            birthday = editableBirthday,
-                            imageUrl = initialProfile.imageUrl,
-                            avatarUrl = initialProfile.avatarUrl,
-                            gender = editableGender,
-                            job = editableJob,
-                            location = editableLocation,
-                            description = editableDescription,
-                            interests = selectedInterests.toList()
-                        )
-                        profileViewModel.updateProfile(user)
-                        isSaving = false
-                        isEditMode = false
-                    } else {
-                        isEditMode = true
-                    }
-                }) {
-                    Text(
-                        text = if (isEditMode) "Done" else "Edit Profile",
-                        color = AppColors.Text_Pink,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-
-        // Saving Indicator and Error Message
-        item {
-            if (isSaving) {
-                CircularProgressIndicator(modifier = Modifier.padding(vertical = 8.dp))
-            }
-            if (saveError != null) {
-                Text(
-                    text = saveError ?: "Unknown error while saving",
-                    color = Color.Red,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-        }
-
-        // Profile Image & Camera Icon (only clickable in edit mode)
-        item {
-            Box(contentAlignment = Alignment.BottomEnd) {
-                val imageUrl = initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()
-                val imageModifier = Modifier
-                    .size(170.dp)
-                    .padding(vertical = 8.dp)
-                    .clip(CircleShape)
-                    .clickable(enabled = isEditMode) { if (isEditMode) imagePickerLauncher.launch("image/*") };
-                if (!imageUrl.isNullOrBlank()) {
-                    Image(
-                        painter = rememberAsyncImagePainter(model = imageUrl, error = painterResource(R.drawable.ic_avatar)),
-                        contentDescription = "Profile Image",
-                        modifier = imageModifier,
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(R.drawable.ic_avatar),
-                        contentDescription = "Default Avatar",
-                        modifier = imageModifier,
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .align(Alignment.BottomEnd)
-                        .clip(CircleShape)
-                        .background(AppColors.Main_Secondary1)
-                        .clickable(enabled = isEditMode) { if (isEditMode) imagePickerLauncher.launch("image/*") },
-                    contentAlignment = Alignment.Center
-                ) {
                     Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Change Photo",
-                        tint = if (isEditMode) AppColors.Main_Primary else Color.Gray,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = AppColors.Text_Pink
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-
         }
 
-        // Form Fields
+        // Avatar centered with overlapping camera icon
         item {
-            NameFields(
-                firstName = editableFirstName, lastName = editableLastName, isEditMode = isEditMode,
-                onFirstNameChange = { editableFirstName = it },
-                onLastNameChange = { editableLastName = it }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            BirthdayGenderFields(
-                birthday = editableBirthday, gender = editableGender, isEditMode = isEditMode,
-                showCalendar = showCalendar,
-                onShowCalendar = { showCalendar = true },
-                onGenderChange = { editableGender = it }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            JobDropdown(
-                job = editableJob,
-                isEditMode = isEditMode,
-                onJobChange = { editableJob = it })
-            Spacer(modifier = Modifier.height(8.dp))
-            LocationField(
-                location = editableLocation, isEditMode = isEditMode,
-                onLocationChange = { editableLocation = it }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            DescriptionField(
-                description = editableDescription, isEditMode = isEditMode,
-                onDescriptionChange = { editableDescription = it }
-            )
-        }
-
-
-        // Interests Section
-        item {
-            Text(
-                text = "Interests:",
-                fontSize = 18.sp,
-                color = Color.DarkGray,
+            Box(
                 modifier = Modifier
-                    .padding(top = 24.dp, bottom = 16.dp)
-                    .fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    contentAlignment = Alignment.BottomEnd,
+                    modifier = Modifier.size(140.dp)
+                ) {
+                    val imageUrl = initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()
+                    val imageModifier = Modifier
+                        .size(140.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .border(3.dp, AppColors.Text_Pink, CircleShape)
+                    if (!imageUrl.isNullOrBlank()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = imageUrl, error = painterResource(R.drawable.ic_avatar)),
+                            contentDescription = "Profile Image",
+                            modifier = imageModifier,
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.ic_avatar),
+                            contentDescription = "Default Avatar",
+                            modifier = imageModifier,
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    // Camera icon overlaps avatar (bottom-end)
+                    IconButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .offset(x = (-8).dp, y = (-8).dp)
+                            .clip(CircleShape)
+                            .background(AppColors.Main_Secondary1)
+                            .border(2.dp, Color.White, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Edit Avatar",
+                            tint = AppColors.Main_Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
         }
+
+        // Add Story Button
         item {
-            InterestsSection(
-                allInterests = allInterests,
-                selectedInterests = selectedInterests,
-                isEditMode = isEditMode
-            )
+            Button(
+                onClick = {
+                    // TODO: Implement add story action
+                },
+                modifier = Modifier
+                    .width(180.dp)
+                    .padding(vertical = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AppColors.Text_Pink)
+            ) {
+                Text("Add Story", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Card: Edit button, user info, interests
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isEditMode) AppColors.Main_Secondary1 else Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Edit/Done Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = {
+                            if (isEditMode) {
+                                isSaving = true
+                                saveError = null
+                                val user = User(
+                                    uid = initialProfile.uid,
+                                    firstName = editableFirstName,
+                                    lastName = editableLastName,
+                                    birthday = editableBirthday,
+                                    imageUrl = initialProfile.imageUrl,
+                                    avatarUrl = initialProfile.avatarUrl,
+                                    gender = editableGender,
+                                    job = editableJob,
+                                    location = editableLocation,
+                                    description = editableDescription,
+                                    interests = selectedInterests.toList()
+                                )
+                                profileViewModel.updateProfile(user)
+                                isSaving = false
+                                isEditMode = false
+                            } else {
+                                isEditMode = true
+                            }
+                        }) {
+                            Text(
+                                text = if (isEditMode) "Done" else "Edit",
+                                color = AppColors.Text_Pink,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Saving Indicator and Error Message
+                    if (isSaving) {
+                        CircularProgressIndicator(modifier = Modifier.padding(vertical = 8.dp))
+                    }
+                    if (saveError != null) {
+                        Text(
+                            text = saveError ?: "Unknown error while saving",
+                            color = Color.Red,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+
+                    // User Info Fields
+                    NameFields(
+                        firstName = editableFirstName, lastName = editableLastName, isEditMode = isEditMode,
+                        onFirstNameChange = { editableFirstName = it },
+                        onLastNameChange = { editableLastName = it }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BirthdayGenderFields(
+                        birthday = editableBirthday, gender = editableGender, isEditMode = isEditMode,
+                        showCalendar = showCalendar,
+                        onShowCalendar = { showCalendar = true },
+                        onGenderChange = { editableGender = it }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    JobDropdown(
+                        job = editableJob,
+                        isEditMode = isEditMode,
+                        onJobChange = { editableJob = it })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LocationField(
+                        location = editableLocation, isEditMode = isEditMode,
+                        onLocationChange = { editableLocation = it }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DescriptionField(
+                        description = editableDescription, isEditMode = isEditMode,
+                        onDescriptionChange = { editableDescription = it }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Interests Section inside card
+                    Text(
+                        text = "Interests",
+                        fontSize = 20.sp,
+                        color = AppColors.Text_Pink,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    InterestsSection(
+                        allInterests = allInterests,
+                        selectedInterests = selectedInterests,
+                        isEditMode = isEditMode
+                    )
+                }
+            }
         }
     }
 
@@ -318,246 +380,5 @@ fun ProfileContent(
             },
             onDismiss = { showCalendar = false }
         )
-    }
-}
-
-@Composable
-fun NameFields(
-    firstName: String,
-    lastName: String,
-    isEditMode: Boolean,
-    onFirstNameChange: (String) -> Unit,
-    onLastNameChange: (String) -> Unit
-) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = firstName,
-            onValueChange = { if (isEditMode) onFirstNameChange(it) },
-            label = { Text("First Name") },
-            modifier = Modifier.weight(1f).padding(end = 4.dp, bottom = 8.dp),
-            enabled = isEditMode,
-            readOnly = !isEditMode
-        )
-        OutlinedTextField(
-            value = lastName,
-            onValueChange = { if (isEditMode) onLastNameChange(it) },
-            label = { Text("Last Name") },
-            modifier = Modifier.weight(1f).padding(start = 4.dp, bottom = 8.dp),
-            enabled = isEditMode,
-            readOnly = !isEditMode
-        )
-    }
-}
-
-@Composable
-fun BirthdayGenderFields(
-    birthday: String,
-    gender: String,
-    isEditMode: Boolean,
-    showCalendar: Boolean,
-    onShowCalendar: () -> Unit,
-    onGenderChange: (String) -> Unit
-) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier.weight(1f).padding(end = 4.dp, bottom = 8.dp)
-                .clickable(enabled = isEditMode) { if (isEditMode) onShowCalendar() }
-        ) {
-            OutlinedTextField(
-                value = birthday,
-                onValueChange = {},
-                label = { Text("Birthday") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isEditMode,
-                readOnly = true
-            )
-        }
-        var expanded by remember { mutableStateOf(false) }
-        val genderOptions = listOf("Man", "Woman", "Other")
-        Box(
-            modifier = Modifier.weight(1f)
-                .padding(start = 4.dp, bottom = 8.dp)
-        ) {
-            OutlinedTextField(
-                value = gender,
-                onValueChange = {},
-                label = { Text("Gender") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (isEditMode) Modifier.clickable { expanded = true } else Modifier),
-                enabled = isEditMode,
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { if (isEditMode) expanded = true }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_drop_down),
-                            contentDescription = "Dropdown"
-                        )
-                    }
-                }
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                genderOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onGenderChange(option)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun JobDropdown(
-    job: String,
-    isEditMode: Boolean,
-    onJobChange: (String) -> Unit
-) {
-    val jobOptions = listOf(
-        "Software Engineer", "Doctor", "Teacher", "Nurse", "Accountant", "Designer", "Manager", "Salesperson", "Lawyer", "Pharmacist",
-        "Architect", "Chef", "Police Officer", "Firefighter", "Scientist", "Dentist", "Mechanic", "Electrician", "Plumber", "Pilot",
-        "Flight Attendant", "Journalist", "Photographer", "Artist", "Musician", "Actor", "Writer", "Engineer", "Consultant", "Entrepreneur"
-    )
-    var jobDropdownExpanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = jobDropdownExpanded,
-        onExpandedChange = { if (isEditMode) jobDropdownExpanded = !jobDropdownExpanded }
-    ) {
-        OutlinedTextField(
-            value = job,
-            onValueChange = { if (isEditMode) onJobChange(it) },
-            label = { Text("Job") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = isEditMode,
-            readOnly = false,
-            singleLine = true,
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = jobDropdownExpanded)
-            }
-        )
-        ExposedDropdownMenu(
-            expanded = jobDropdownExpanded,
-            onDismissRequest = { jobDropdownExpanded = false }
-        ) {
-            jobOptions.filter { it.contains(job, ignoreCase = true) || job.isBlank() }
-                .forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onJobChange(option)
-                            jobDropdownExpanded = false
-                        }
-                    )
-                }
-        }
-    }
-}
-
-@Composable
-fun LocationField(
-    location: String,
-    isEditMode: Boolean,
-    onLocationChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = location,
-        onValueChange = { if (isEditMode && it.length <= 70) onLocationChange(it) },
-        label = { Text("Location") },
-        modifier = Modifier.fillMaxWidth(),
-        enabled = isEditMode,
-        readOnly = !isEditMode,
-        singleLine = true
-    )
-}
-
-@Composable
-fun DescriptionField(
-    description: String,
-    isEditMode: Boolean,
-    onDescriptionChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = description,
-        onValueChange = { if (isEditMode && it.length <= 150) onDescriptionChange(it) },
-        label = { Text("Description") },
-        modifier = Modifier.fillMaxWidth(),
-        enabled = isEditMode,
-        readOnly = !isEditMode,
-        supportingText = { Text("Max 150 characters") },
-        maxLines = 3
-    )
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun InterestsSection(
-    allInterests: List<Interest>,
-    selectedInterests: SnapshotStateList<String>,
-    isEditMode: Boolean
-) {
-    // Display interests in rows of two using chunked
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        allInterests.chunked(2).forEach { rowInterests ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                rowInterests.forEach { interest ->
-                    val isSelected = selectedInterests.contains(interest.name)
-                    Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = if (isSelected) AppColors.Text_Pink.copy(alpha = 0.15f) else Color.LightGray.copy(alpha = 0.2f),
-                        border = if (isSelected) BorderStroke(2.dp, AppColors.Text_Pink) else null,
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .weight(1f)
-                            .height(48.dp)
-                            .clickable(enabled = isEditMode) {
-                                if (isEditMode) {
-                                    if (isSelected) selectedInterests.remove(interest.name)
-                                    else selectedInterests.add(interest.name)
-                                }
-                            },
-                        tonalElevation = if (isSelected) 4.dp else 0.dp
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = interest.icon),
-                                contentDescription = interest.name,
-                                tint = if (isSelected) AppColors.Text_Pink else Color.Gray,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = interest.name,
-                                color = if (isSelected) AppColors.Text_Pink else Color.DarkGray,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-                // If the row has only one interest, add a Spacer to fill the second column
-                if (rowInterests.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
     }
 }
