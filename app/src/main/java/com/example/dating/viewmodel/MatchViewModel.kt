@@ -37,7 +37,7 @@ class MatchViewModel @Inject constructor(
             _userInfo.value = UserInfo(
                 uid = user.uid,
                 firstName = user.firstName,
-                avatarUrl = user.imageUrl.firstOrNull()
+                avatarUrl = if (user.avatarUrl.isNullOrBlank()) null else user.avatarUrl
             )
         } else {
             _userInfo.value = null
@@ -49,7 +49,7 @@ class MatchViewModel @Inject constructor(
             _matchedUserInfo.value = UserInfo(
                 uid = user.uid,
                 firstName = user.firstName,
-                avatarUrl = user.imageUrl.firstOrNull()
+                avatarUrl = if (user.avatarUrl.isNullOrBlank()) null else user.avatarUrl
             )
         } else {
             _matchedUserInfo.value = null
