@@ -200,6 +200,15 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                     startIndex = startIndex
                 )
             }
+
+            // Add this composable for viewing stories
+            composable(
+                route = "story_viewer/{uid}",
+                arguments = listOf(navArgument("uid") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val uid = backStackEntry.arguments?.getString("uid") ?: return@composable
+                com.example.dating.ui.story.StoryViewerScreen(uid = uid, navController = navController)
+            }
         }
     }
 }

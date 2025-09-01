@@ -11,8 +11,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,6 +30,19 @@ class StoryViewModel @Inject constructor(
     val myStories: StateFlow<List<Story>> =
         (auth.currentUser?.uid?.let { repo.observeMyStories(it) } ?: flowOf(emptyList()))
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    /**
+     * Observe stories for any user as StateFlow.
+     */
+    fun observeUserStories(uid: String): StateFlow<List<Story>> {
+        val state = MutableStateFlow<List<Story>>(emptyList())
+        viewModelScope.launch {
+            repo.observeMyStories(uid).collectLatest { stories ->
+                state.value = stories
+            }
+        }
+        return state
+    }
 
     fun postStories(caption: String?, uris: List<Uri>) {
         if (uris.isEmpty()) return
