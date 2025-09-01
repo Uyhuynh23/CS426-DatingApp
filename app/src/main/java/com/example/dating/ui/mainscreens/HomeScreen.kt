@@ -58,6 +58,7 @@ import com.example.dating.data.model.User
 import com.example.dating.ui.components.BottomNavigationBar
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.example.dating.navigation.Screen
+import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
@@ -228,7 +229,10 @@ fun ProfileCard(
     navController: NavController
 ) {
     val currentProfile = profiles.getOrNull(profileIndex.value)
-    if (currentProfile == null) {
+    val nextProfile = profiles.getOrNull(profileIndex.value + 1)
+    val currentUid = currentProfile?.uid
+
+    if (currentProfile == null && nextProfile == null) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -240,26 +244,6 @@ fun ProfileCard(
         return
     }
 
-    val firstName = currentProfile.firstName ?: ""
-    val lastName = currentProfile.lastName ?: ""
-    val name = (firstName + " " + lastName).trim().ifEmpty { "Unknown" }
-    val birthday = currentProfile.birthday
-    Log.d("YearBug", "Year: $birthday")
-
-    val age = birthday?.let {
-        try {
-            // Expecting format dd/MM/yyyy
-            val year = it.split("/").getOrNull(2)?.toInt() ?: throw Exception("Invalid date")
-            Log.d("YearBug", "Year: $year")
-            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-            (currentYear - year).toString()
-        } catch (e: Exception) {
-            "?"
-        }
-    } ?: "?"
-    val description = currentProfile.description ?: "No description"
-    val distance = currentProfile.distance?.toString() ?: "1 km"
-
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
@@ -270,7 +254,6 @@ fun ProfileCard(
     val iconScale = 1f + 0.3f * iconAlpha
     val cardRotation = (offsetX.value / 15).coerceIn(-25f, 25f)
     val threshold = 200f
-    val nextProfile = profiles.getOrNull(profileIndex.value + 1)
 
     Box(
         modifier = Modifier
@@ -279,9 +262,10 @@ fun ProfileCard(
             .padding(horizontal = 30.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Next card (subtle scale/alpha)
+        // Render next card first (always present if available)
         if (nextProfile != null) {
-            Box(
+            ProfileCardContent(
+                profile = nextProfile,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(550.dp)
@@ -291,63 +275,116 @@ fun ProfileCard(
                         scaleX = lerp(0.95f, 1f, iconAlpha),
                         scaleY = lerp(0.95f, 1f, iconAlpha),
                         alpha = lerp(0.7f, 1f, iconAlpha)
-                    )
-            ) {}
+                    ),
+                navController = navController
+            )
         }
-        // Top card (draggable)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(550.dp)
-                .offset { IntOffset(offsetX.value.toInt(), offsetY.value.toInt()) }
-                .rotate(cardRotation)
-                .clip(RoundedCornerShape(32.dp))
-                .background(Color(0xFF23222B))
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onDoubleTap = {
-                            currentProfile.uid?.let { uid ->
-                                Log.d("Navigation", "Double tap detected, navigating to user profile with uid: $uid")
-                                navController.navigate(Screen.UserProfile.route(uid))
-                            }
-                        }
-                    )
-                }
-                .pointerInput(profileIndex.value) {
-                    detectDragGestures(
-                        onDragStart = { isDragging.value = true },
-                        onDragEnd = {
-                            isDragging.value = false
-                            scope.launch {
-                                when {
-                                    offsetX.value > threshold -> {
-                                        handleProfileAction(true, profileIndex, profiles, homeViewModel)
-                                        animateSwipe(offsetX, 1f)
-                                        offsetY.snapTo(0f)
-                                    }
-                                    offsetX.value < -threshold -> {
-                                        handleProfileAction(false, profileIndex, profiles, homeViewModel)
-                                        animateSwipe(offsetX, -1f)
-                                        offsetY.snapTo(0f)
-                                    }
-                                    else -> {
-                                        offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
-                                        offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
-                                    }
+        // Top card (draggable, always present if available)
+        if (currentProfile != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(550.dp)
+                    .offset { IntOffset(offsetX.value.toInt(), offsetY.value.toInt()) }
+                    .rotate(cardRotation)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color(0xFF23222B))
+                    .pointerInput(currentUid) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                currentUid?.let { uid ->
+                                    navController.navigate(Screen.UserProfile.route(uid))
                                 }
                             }
-                        },
-                        onDrag = { change, dragAmount ->
-                            scope.launch {
-                                offsetX.snapTo(offsetX.value + dragAmount.x)
-                                offsetY.snapTo(offsetY.value + dragAmount.y)
+                        )
+                    }
+                    .pointerInput(profileIndex.value) {
+                        detectDragGestures(
+                            onDragStart = { isDragging.value = true },
+                            onDragEnd = {
+                                isDragging.value = false
+                                scope.launch {
+                                    when {
+                                        offsetX.value > threshold -> {
+                                            animateSwipe(offsetX, 1f)
+                                            offsetY.snapTo(0f)
+                                            handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                                        }
+                                        offsetX.value < -threshold -> {
+                                            animateSwipe(offsetX, -1f)
+                                            offsetY.snapTo(0f)
+                                            handleProfileAction(false, profileIndex, profiles, homeViewModel)
+
+                                        }
+                                        else -> {
+                                            offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                            offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                        }
+                                    }
+                                }
+                            },
+                            onDrag = { change, dragAmount ->
+                                scope.launch {
+                                    offsetX.snapTo(offsetX.value + dragAmount.x)
+                                    offsetY.snapTo(offsetY.value + dragAmount.y)
+                                }
                             }
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            // Portrait Image (placeholder)
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                ProfileCardContent(
+                    profile = currentProfile,
+                    modifier = Modifier.fillMaxSize(),
+                    navController = navController,
+                    likeProgress = likeProgress,
+                    dislikeProgress = dislikeProgress,
+                    iconAlpha = iconAlpha,
+                    iconScale = iconScale
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileCardContent(
+    profile: User?,
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    likeProgress: Float = 0f,
+    dislikeProgress: Float = 0f,
+    iconAlpha: Float = 0f,
+    iconScale: Float = 1f
+) {
+    if (profile == null) return
+    val firstName = profile.firstName ?: ""
+    val lastName = profile.lastName ?: ""
+    val name = (firstName + " " + lastName).trim().ifEmpty { "Unknown" }
+    val birthday = profile.birthday
+    val age = birthday?.let {
+        try {
+            val year = it.split("/").getOrNull(2)?.toInt() ?: throw Exception("Invalid date")
+            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+            (currentYear - year).toString()
+        } catch (e: Exception) {
+            "?"
+        }
+    } ?: "?"
+    val description = profile.description ?: "No description"
+    val distance = profile.distance?.toString() ?: "1 km"
+
+    Box(modifier = modifier) {
+        if (profile.avatarUrl != null && profile.avatarUrl.isNotBlank()) {
+            Image(
+                painter = rememberAsyncImagePainter(model = profile.avatarUrl),
+                contentDescription = "Profile Image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(32.dp))
+            )
+        } else {
             Image(
                 imageVector = Icons.Default.Person,
                 contentDescription = "Profile Image",
@@ -356,77 +393,73 @@ fun ProfileCard(
                     .fillMaxSize()
                     .clip(RoundedCornerShape(32.dp))
             )
-            // Distance Label
-            Box(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopStart)
-                    .background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(50))
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                Text(distance, color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
-            // Gradient Overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black),
-                            startY = 0f,
-                            endY = 300f
-                        ),
-                        shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-                    )
+        }
+        Box(
+            modifier = Modifier
+                .padding(16.dp)
+                .align(Alignment.TopStart)
+                .background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(50))
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+            Text(distance, color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black),
+                        startY = 0f,
+                        endY = 300f
+                    ),
+                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                )
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "$name, $age",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
-            // Name, Age, Description
-            Column(
+            Text(
+                text = description,
+                color = Color(0xFFCCCCCC),
+                fontSize = 16.sp,
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        }
+        if (likeProgress > 0.05f) {
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Like",
+                tint = Color.Red.copy(alpha = iconAlpha),
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "$name, $age",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp,
-                    maxLines = 1,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = description,
-                    color = Color(0xFFCCCCCC),
-                    fontSize = 16.sp,
-                    maxLines = 1,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
-            // Like/Dislike Icon Overlay
-            if (likeProgress > 0.05f) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = "Like",
-                    tint = Color.Red.copy(alpha = iconAlpha),
-                    modifier = Modifier
-                        .size((96f * iconScale).dp)
-                        .align(Alignment.Center)
-                )
-            } else if (dislikeProgress > 0.05f) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Dislike",
-                    tint = Color.White.copy(alpha = iconAlpha),
-                    modifier = Modifier
-                        .size((96f * iconScale).dp)
-                        .align(Alignment.Center)
-                )
-            }
+                    .size((96f * iconScale).dp)
+                    .align(Alignment.Center)
+            )
+        } else if (dislikeProgress > 0.05f) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Dislike",
+                tint = Color.White.copy(alpha = iconAlpha),
+                modifier = Modifier
+                    .size((96f * iconScale).dp)
+                    .align(Alignment.Center)
+            )
         }
     }
 }
