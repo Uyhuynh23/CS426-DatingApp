@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import android.util.Log
 
 class FirebaseMessagesRepository @Inject constructor(
     private val db: FirebaseFirestore
@@ -26,16 +27,17 @@ class FirebaseMessagesRepository @Inject constructor(
             .whereArrayContains("participants", currentUid)
             .orderBy("lastTimestamp", Query.Direction.DESCENDING)
 
-        android.util.Log.d("FirebaseMessagesRepository", "Firestore query: participants contains $currentUid, ordered by lastTimestamp DESC")
+        Log.d("FirebaseMessagesRepository", "Firestore query: participants contains $currentUid, ordered by lastTimestamp DESC")
 
         val listener = query.addSnapshotListener { snapshot, _ ->
-            if (snapshot == null) {
+            if (snapshot == null ) {
                 trySend(emptyList())
+                Log.w("Firestore", "Snapshot is null")
                 return@addSnapshotListener
             }
-            android.util.Log.d("FirebaseMessagesRepository", "Query result count: ${snapshot.documents.size}")
+            Log.d("FirebaseMessagesRepository", "Query result count: ${snapshot.documents.size}")
             snapshot.documents.forEach { doc ->
-                android.util.Log.d(
+                Log.d(
                     "FirebaseMessagesRepository",
                     "Conversation doc: ${doc.id}, exists: ${doc.exists()}, fromCache: ${doc.metadata.isFromCache}, hasPendingWrites: ${doc.metadata.hasPendingWrites()}, data: ${doc.data}"
                 )
@@ -84,6 +86,7 @@ class FirebaseMessagesRepository @Inject constructor(
 
             Tasks.whenAllSuccess<ConversationPreview>(tasks)
                 .addOnSuccessListener { result -> trySend(result) }
+                .addOnFailureListener { trySend(emptyList()) }
         }
 
         awaitClose { listener.remove() }

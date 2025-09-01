@@ -47,7 +47,12 @@ fun MessagesScreen(
     val sheetState = rememberModalBottomSheetState()
     var showFilterSheet by remember { mutableStateOf(false) }
 
+
+
     Scaffold(bottomBar = { BottomNavigationBar(navController, 2) }) { paddingValues ->
+        LaunchedEffect(Unit) {
+            viewModel.loadMessages()
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
