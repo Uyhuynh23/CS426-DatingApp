@@ -2,6 +2,7 @@ package com.example.dating.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.dating.data.model.User
+import com.example.dating.data.model.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,6 +17,8 @@ class UserViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ViewModel() {
+
+    @Inject lateinit var userRepository: UserRepository
 
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user
@@ -52,6 +55,7 @@ class UserViewModel @Inject constructor(
                 _isLoading.value = false
             }
     }
+
 
     override fun onCleared() {
         super.onCleared()

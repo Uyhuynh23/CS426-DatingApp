@@ -11,7 +11,11 @@ import com.example.dating.data.model.User
 import com.example.dating.data.model.repository.AuthRepository
 import com.example.dating.data.model.repository.UserRepository
 import com.example.dating.data.model.Resource
+import com.example.dating.data.model.UserFilterPreferences
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -38,11 +42,6 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun loadUser(uid: String) {
-        viewModelScope.launch {
-            userRepository.getUser(uid).collect { _user.value = it }
-        }
-    }
 
     fun updateProfile(user: User) {
         android.util.Log.d("ProfileViewModel", "updateProfile called with: $user")
@@ -120,5 +119,19 @@ class ProfileViewModel @Inject constructor(
             .addOnFailureListener { e: Exception ->
                 android.util.Log.e("ProfileViewModel", "Failed to upload avatar: ${e.message}")
             }
+    }
+
+
+    fun updateFilterPreferences(uid: String, prefs: UserFilterPreferences, onResult: (Resource<Unit>) -> Unit) {
+        android.util.Log.d("UserViewModel", "updateFilterPreferences called: uid=$uid, prefs=$prefs")
+        CoroutineScope(Dispatchers.IO).launch {
+            val result = userRepository.updateFilterPreferences(uid, prefs)
+            android.util.Log.d("UserViewModel", "updateFilterPreferences result: $result for uid=$uid")
+            onResult(result)
+        }
+    }
+
+    fun getCurrentUserId(): String? {
+        return FirebaseAuth.getInstance().currentUser?.uid
     }
 }

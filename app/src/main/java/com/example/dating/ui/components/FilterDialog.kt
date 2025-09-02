@@ -13,6 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dating.ui.theme.AppColors
+import com.example.dating.viewmodel.ProfileViewModel
+import com.example.dating.data.model.UserFilterPreferences
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,19 +22,30 @@ import com.example.dating.ui.theme.AppColors
 fun FilterDialog(
     show: Boolean,
     onDismiss: () -> Unit,
+    userViewModel: ProfileViewModel,
+    currentUid: String,
     onApply: (selectedInterest: String, location: String, distance: Float, ageRange: ClosedFloatingPointRange<Float>) -> Unit
 ) {
     if (!show) return
-    var selectedInterest by remember { mutableStateOf("Girls") }
-    var location by remember { mutableStateOf("Chicago, USA") }
-    var distance by remember { mutableStateOf(40f) }
-    var ageRange by remember { mutableStateOf(20f..28f) }
+    val userState by userViewModel.user.collectAsState()
+    val filterPrefs = userState?.filterPreferences
+    var selectedInterest by remember { mutableStateOf(filterPrefs?.preferredGender ?: "Female") }
+    var location by remember { mutableStateOf(userState?.location ?: "Chicago, USA") }
+    var distance by remember { mutableStateOf(filterPrefs?.maxDistance?.toFloat() ?: 40f) }
+    var ageRange by remember { mutableStateOf((filterPrefs?.minAge?.toFloat() ?: 20f)..(filterPrefs?.maxAge?.toFloat() ?: 28f)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             Button(
                 onClick = {
+                    val prefs = UserFilterPreferences(
+                        preferredGender = selectedInterest,
+                        minAge = ageRange.start.toInt(),
+                        maxAge = ageRange.endInclusive.toInt(),
+                        maxDistance = distance.toInt()
+                    )
+                    userViewModel.updateFilterPreferences(currentUid, prefs) { /* handle result if needed */ }
                     onApply(selectedInterest, location, distance, ageRange)
                     onDismiss()
                 },
@@ -56,7 +69,7 @@ fun FilterDialog(
             ) {
                 Text("Filters", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 TextButton(onClick = {
-                    selectedInterest = "Girls"
+                    selectedInterest = "Female"
                     location = "Chicago, USA"
                     distance = 40f
                     ageRange = 20f..28f
@@ -71,8 +84,8 @@ fun FilterDialog(
                 Text("Interested in", fontSize = 16.sp, color = Color.Gray, modifier = Modifier.align(Alignment.Start))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    FilterSegmentButton("Girls", selectedInterest == "Girls", onClick = { selectedInterest = "Girls" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
-                    FilterSegmentButton("Boys", selectedInterest == "Boys", onClick = { selectedInterest = "Boys" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
+                    FilterSegmentButton("Female", selectedInterest == "Female", onClick = { selectedInterest = "Female" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
+                    FilterSegmentButton("Male", selectedInterest == "Male", onClick = { selectedInterest = "Male" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                     FilterSegmentButton("Both", selectedInterest == "Both", onClick = { selectedInterest = "Both" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                 }
                 Spacer(modifier = Modifier.height(24.dp))
