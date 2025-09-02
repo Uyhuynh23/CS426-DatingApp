@@ -31,13 +31,17 @@ class ChatViewModel @Inject constructor(
     private val _groupedMessages = MutableStateFlow<List<DayMessages>>(emptyList())
     val groupedMessages: StateFlow<List<DayMessages>> = _groupedMessages
 
+    private val _lastActive = MutableStateFlow<Long?>(null)
+    val lastActive: StateFlow<Long?> = _lastActive
+
     private val chatRepository = ChatRepository(db, auth)
 
     fun loadPeer(conversationId: String) {
         viewModelScope.launch {
-            val (name, photoUrl) = chatRepository.getPeerInfo(conversationId)
+            val (name, photoUrl, lastActive) = chatRepository.getPeerInfo(conversationId)
             _peerName.value = name
             _peerAvatar.value = photoUrl
+            _lastActive.value = lastActive // may be null
         }
     }
 

@@ -53,11 +53,15 @@ fun ChatDetailScreen(
     val peerName by viewModel.peerName.collectAsState(initial = "Grace")
     val peerAvatar by viewModel.peerAvatar.collectAsState(initial = null)
     val groupedMessages by viewModel.groupedMessages.collectAsState()
+    val lastActive by viewModel.lastActive.collectAsState()
 
     LaunchedEffect(conversationId) {
         viewModel.loadMessages(conversationId)
         viewModel.loadPeer(conversationId)
     }
+
+    // Online detection: consider online if lastActive within 2 minutes
+    val isOnline = lastActive?.let { System.currentTimeMillis() - it < 2 * 60 * 1000 } ?: false
 
     // đảm bảo thứ tự cũ -> mới, và tự cuộn xuống cuối
     val listState = rememberLazyListState()
@@ -80,7 +84,8 @@ fun ChatDetailScreen(
             title = "Messages",
             name = peerName,
             avatarUrl = peerAvatar,
-            online = true,
+            online = isOnline,
+            lastActive = lastActive,
             onBack = { navController.popBackStack() },
             onMore = { /*TODO*/ }
         )
@@ -130,6 +135,7 @@ private fun ChatHeaderWhite(
     name: String,
     avatarUrl: String?,
     online: Boolean,
+    lastActive: Long? = null,
     onBack: () -> Unit,
     onMore: () -> Unit
 ) {
@@ -186,9 +192,33 @@ private fun ChatHeaderWhite(
                         Spacer(Modifier.width(6.dp))
                         Text("Online", color = Subtle, fontSize = 12.sp)
                     }
+                } else if (lastActive != null && lastActive != 0L) {
+                    Text(
+                        text = "Last active ${formatTimeAgo(lastActive)}",
+                        color = Subtle,
+                        fontSize = 12.sp
+                    )
+                } else {
+                    Text(
+                        text = "Last active unknown",
+                        color = Subtle,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
+    }
+}
+
+private fun formatTimeAgo(lastActive: Long?): String {
+    if (lastActive == null || lastActive == 0L) return "unknown"
+    val now = System.currentTimeMillis()
+    val diff = now - lastActive
+    return when {
+        diff < 60_000 -> "just now"
+        diff < 3600_000 -> "${diff / 60_000}m ago"
+        diff < 86400_000 -> "${diff / 3600_000}h ago"
+        else -> "${diff / 86400_000}d ago"
     }
 }
 
