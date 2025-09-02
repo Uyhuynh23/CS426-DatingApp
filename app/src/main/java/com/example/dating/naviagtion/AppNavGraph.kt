@@ -124,11 +124,13 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
 
             // Home
             composable(Screen.Home.route) { backStackEntry ->
+                android.util.Log.d("AppNavGraph", "Navigated to HomeScreen")
                 val homeViewModel: HomeViewModel = hiltViewModel(backStackEntry)
                 HomeScreen(navController, homeViewModel)
             }
 
             composable(Screen.Favorite.route) { backStackEntry ->
+                android.util.Log.d("AppNavGraph", "Navigated to FavoriteScreen")
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("root_graph")
                 }

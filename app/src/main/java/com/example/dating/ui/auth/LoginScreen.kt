@@ -175,9 +175,11 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
                             is Resource.Success -> {
                                 LaunchedEffect(Unit) {
                                     navController.navigate("home") {
-                                        //popUpTo("login") { inclusive = false }
+                                        popUpTo("login") { inclusive = true }
+                                        launchSingleTop = true
                                     }
                                     loginClicked = false
+
                                 }
                             }
                         }

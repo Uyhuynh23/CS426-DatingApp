@@ -8,20 +8,91 @@ import com.example.dating.data.model.User
 import javax.inject.Singleton
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.CollectionReference
 @Singleton
 class HomeRepository @Inject constructor(
     private val db: FirebaseFirestore
 ) {
     suspend fun fetchProfiles(): List<String> {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-        android.util.Log.d("HomeRepository", "Fetched UIDs: $currentUserId")
-
+        if (currentUserId == null) return emptyList()
+        val currentUserDoc = db.collection("users").document(currentUserId).get().await()
+        val prefsMap = currentUserDoc.get("filterPreferences") as? Map<*, *>
+        val filterPrefs = prefsMap?.let {
+            com.example.dating.data.model.UserFilterPreferences(
+                preferredGender = it["preferredGender"] as? String,
+                minAge = (it["minAge"] as? Long)?.toInt(),
+                maxAge = (it["maxAge"] as? Long)?.toInt(),
+                maxDistance = (it["maxDistance"] as? Long)?.toInt()
+            )
+        }
         val snapshot = db.collection("users").get().await()
+        val currentUserLocation = currentUserDoc.getString("location")
+        val currentUserBirthday = currentUserDoc.getString("birthday")
+        val currentUserLatLng = null // TODO: parse location if you use lat/lng
         val uids = snapshot.documents.mapNotNull { doc ->
             val uid = doc.id
-            if (uid != currentUserId) uid else null
+            if (uid == currentUserId) return@mapNotNull null
+            val gender = doc.getString("gender")
+            val birthday = doc.getString("birthday")
+            val location = doc.getString("location")
+            val distance = (doc.get("distance") as? Long)?.toInt()
+            var filterPassed = true
+            val infoLog = StringBuilder("UID=$uid, gender=$gender, birthday=$birthday, location=$location, distance=$distance")
+            // Filter by gender
+            if (filterPrefs?.preferredGender != null && filterPrefs.preferredGender != "Both" && gender != filterPrefs.preferredGender) {
+                infoLog.append(" | Gender filter failed")
+                filterPassed = false
+            }
+            // Filter by age
+            if (filterPrefs?.minAge != null && filterPrefs?.maxAge != null && birthday != null) {
+                var age: Int? = null
+                var parseError: String? = null
+                try {
+                    // Try user-provided logic first
+                    age = try {
+                        val year = birthday.split("/").getOrNull(2)?.toInt()
+                        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                        if (year != null) currentYear - year else null
+                    } catch (e: Exception) { null }
+                    // If failed, try other formats
+                    if (age == null) {
+                        val formats = listOf("yyyy-MM-dd", "dd-MM-yyyy", "MM/dd/yyyy")
+                        for (fmt in formats) {
+                            try {
+                                val sdf = java.text.SimpleDateFormat(fmt)
+                                val date = sdf.parse(birthday)
+                                if (date != null) {
+                                    val dobCal = java.util.Calendar.getInstance()
+                                    dobCal.time = date
+                                    val birthYear = dobCal.get(java.util.Calendar.YEAR)
+                                    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                                    age = currentYear - birthYear
+                                    break
+                                }
+                            } catch (e: Exception) { parseError = e.message }
+                        }
+                    }
+                } catch (e: Exception) {
+                    parseError = e.message
+                }
+                if (age == null || age < filterPrefs.minAge || age > filterPrefs.maxAge) {
+                    infoLog.append(" | Age filter failed (age=$age, birthday=$birthday, error=$parseError)")
+                    filterPassed = false
+                } else {
+                    infoLog.append(" | Age=$age")
+                }
+            }
+            // Filter by distance
+            if (filterPrefs?.maxDistance != null && distance != null && distance > filterPrefs.maxDistance) {
+                infoLog.append(" | Distance filter failed")
+                filterPassed = false
+            }
+            infoLog.append(" | Filter result: ${if (filterPassed) "PASS" else "FAIL"}")
+            android.util.Log.d("HomeRepository", infoLog.toString())
+            if (filterPassed) uid else null
         }
-        android.util.Log.d("HomeRepository", "Fetched UIDs: $uids")
+        android.util.Log.d("HomeRepository", "Filtered UIDs: $uids")
         return uids
     }
 
