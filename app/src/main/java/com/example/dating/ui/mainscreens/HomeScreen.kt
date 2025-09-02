@@ -59,6 +59,7 @@ import com.example.dating.ui.components.BottomNavigationBar
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.example.dating.navigation.Screen
 import coil.compose.rememberAsyncImagePainter
+import com.example.dating.viewmodel.ProfileViewModel
 
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
@@ -207,10 +208,15 @@ fun HomeHeader(navController: NavController) {
             )
         }
     }
+    val userViewModel: ProfileViewModel = hiltViewModel()
+    val currentUid = userViewModel.getCurrentUserId().orEmpty()
+    android.util.Log.d("HomeHeader", "Current UID: $currentUid")
     if (showFilterDialog.value) {
         com.example.dating.ui.components.FilterDialog(
             show = showFilterDialog.value,
             onDismiss = { showFilterDialog.value = false },
+            userViewModel = userViewModel,
+            currentUid = currentUid,
             onApply = { selectedInterest, location, distance, ageRange ->
                 // TODO: Apply filter logic here
                 showFilterDialog.value = false

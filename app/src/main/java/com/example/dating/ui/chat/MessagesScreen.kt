@@ -50,9 +50,7 @@ fun MessagesScreen(
 
 
     Scaffold(bottomBar = { BottomNavigationBar(navController, 2) }) { paddingValues ->
-        LaunchedEffect(Unit) {
-            viewModel.loadMessages()
-        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

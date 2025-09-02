@@ -8,6 +8,7 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
+import com.example.dating.data.model.UserFilterPreferences
 
 
 class UserRepository @Inject constructor(
@@ -92,5 +93,17 @@ class UserRepository @Inject constructor(
         firestore.collection("users").document(uid)
             .update("avatarUrl", avatarUrl)
             .await()
+    }
+
+    suspend fun updateFilterPreferences(uid: String, prefs: UserFilterPreferences): Resource<Unit> {
+        return try {
+            android.util.Log.d("UserRepository", "updateFilterPreferences: uid=$uid, prefs=$prefs")
+            firestore.collection("users").document(uid).update("filterPreferences", prefs).await()
+            android.util.Log.d("UserRepository", "updateFilterPreferences: success for uid=$uid")
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "updateFilterPreferences: failure for uid=$uid", e)
+            Resource.Failure(e)
+        }
     }
 }

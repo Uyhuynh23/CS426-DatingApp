@@ -52,18 +52,23 @@ fun ChatDetailScreen(
     val messages by viewModel.messages.collectAsState()
     val peerName by viewModel.peerName.collectAsState(initial = "Grace")
     val peerAvatar by viewModel.peerAvatar.collectAsState(initial = null)
+    val groupedMessages by viewModel.groupedMessages.collectAsState()
 
     LaunchedEffect(conversationId) {
-        viewModel.loadConversation(conversationId)
+        viewModel.loadMessages(conversationId)
         viewModel.loadPeer(conversationId)
     }
 
     // đảm bảo thứ tự cũ -> mới, và tự cuộn xuống cuối
-    val sorted = remember(messages) { messages.sortedBy { it.timestamp } }
     val listState = rememberLazyListState()
-    LaunchedEffect(sorted.size) {
-        if (sorted.isNotEmpty()) listState.animateScrollToItem(sorted.lastIndex)
+    // Flatten groupedMessages to get total message count
+    val totalMessages = remember(groupedMessages) { groupedMessages.sumOf { it.messages.size } }
+    LaunchedEffect(totalMessages) {
+        if (totalMessages > 0) {
+            listState.animateScrollToItem(totalMessages - 1)
+        }
     }
+
 
     Column(
         Modifier
@@ -80,6 +85,8 @@ fun ChatDetailScreen(
             onMore = { /*TODO*/ }
         )
 
+        Spacer(Modifier.height(16.dp))
+
         // List
         LazyColumn(
             state = listState,
@@ -89,15 +96,17 @@ fun ChatDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
         ) {
-            // luôn hiện Today
-            item { DayDividerWhite("Today") }
-
-            items(sorted) { msg ->
-                ChatBubble(
-                    msg = msg,
-                    meColor = GrayMe,
-                    peerColor = PinkPeer
-                )
+            groupedMessages.forEach { dayMessages ->
+                item {
+                    DayDividerWhite(dayMessages.dayLabel)
+                }
+                items(dayMessages.messages) { msg ->
+                    ChatBubble(
+                        msg = msg,
+                        meColor = GrayMe,
+                        peerColor = PinkPeer
+                    )
+                }
             }
         }
 

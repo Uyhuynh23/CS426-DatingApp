@@ -41,6 +41,20 @@ class MessagesViewModel @Inject constructor(
         loadMessages()
     }
 
+    private fun loadMessages() {
+        val currentUid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            repository.getConversations(currentUid).collect { conversations ->
+                originalMessages = conversations.sortedByDescending { it.lastMessageTimestamp }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    messages = originalMessages
+                )
+                Log.d("MessagesViewModel", "Conversations updated, count=${conversations.size}")
+            }
+        }
+    }
+
     fun updateFilter(newState: MessagesFilterState) {
         _filterState.value = newState
     }
@@ -55,20 +69,6 @@ class MessagesViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(messages = filtered)
     }
 
-    fun loadMessages() {
-        _uiState.value = MessagesUiState(isLoading = true)
-        val currentUid = auth.currentUser?.uid ?: ""
-        viewModelScope.launch {
-            repository.getConversations(currentUid).collect { conversations ->
-                originalMessages = conversations.sortedByDescending { it.lastMessageTimestamp }
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    messages = originalMessages
-                )
-                Log.d("ChatViewModel", "Conversations updated, count=${conversations.size}")
-            }
-        }
-    }
 
     private fun formatTimeAgo(timestamp: Long): String {
         if (timestamp == 0L) return ""
