@@ -332,9 +332,12 @@ fun ProfileContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     BirthdayGenderFields(
-                        birthday = editableBirthday, gender = editableGender, isEditMode = isEditMode,
+                        birthday = editableBirthday,
+                        gender = editableGender,
+                        isEditMode = isEditMode,
                         showCalendar = showCalendar,
-                        onShowCalendar = { showCalendar = true },
+                        onShowCalendar = { showCalendar = !showCalendar }, // <-- Toggle state
+                        onBirthdayChange = { editableBirthday = it },
                         onGenderChange = { editableGender = it }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -376,12 +379,21 @@ fun ProfileContent(
     }
 
     if (showCalendar) {
+        // Parse editableBirthday to Date if available, else null
+        val initialDate = try {
+            if (editableBirthday.isNotBlank()) {
+                java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).parse(editableBirthday)
+            } else null
+        } catch (e: Exception) {
+            null
+        }
         CustomCalendarDialog(
             onDateSelected = { selectedDate ->
-                editableBirthday = selectedDate.toString() // Ensure your date format is correct
+                editableBirthday = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(selectedDate)
                 showCalendar = false
             },
-            onDismiss = { showCalendar = false }
+            onDismiss = { showCalendar = false },
+            date = initialDate // <-- Pass initial date here
         )
     }
 }
