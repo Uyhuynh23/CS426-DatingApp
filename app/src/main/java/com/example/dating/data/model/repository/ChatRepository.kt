@@ -14,17 +14,18 @@ class ChatRepository(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) {
-    suspend fun getPeerInfo(conversationId: String): Pair<String, String> {
+    suspend fun getPeerInfo(conversationId: String): Triple<String, String, Long?> {
         val doc = db.collection("conversations").document(conversationId).get().await()
         val currentUid = auth.currentUser?.uid
-        val participants = doc.get("participants") as? List<String> ?: return "" to ""
-        val peerId = participants.find { it != currentUid } ?: return "" to ""
+        val participants = doc.get("participants") as? List<String> ?: return Triple("", "", null)
+        val peerId = participants.find { it != currentUid } ?: return Triple("", "", null)
         val userDoc = db.collection("users").document(peerId).get().await()
         val firstName = userDoc.getString("firstName") ?: ""
         val lastName = userDoc.getString("lastName") ?: ""
         val name = "$firstName $lastName".trim()
         val photoUrl = userDoc.getString("avatarUrl") ?: ""
-        return name to photoUrl
+        val lastActive = userDoc.getLong("lastActive") // <-- may be null
+        return Triple(name, photoUrl, lastActive)
     }
 
 

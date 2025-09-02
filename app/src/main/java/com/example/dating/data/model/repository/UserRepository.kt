@@ -106,4 +106,21 @@ class UserRepository @Inject constructor(
             Resource.Failure(e)
         }
     }
+
+    suspend fun setUserOnlineStatus(uid: String, isOnline: Boolean) {
+        firestore.collection("users").document(uid).update(
+            mapOf(
+                "isOnline" to isOnline,
+                "lastActive" to System.currentTimeMillis()
+            )
+        ).await()
+    }
+
+    suspend fun isUserOnline(uid: String): Boolean {
+        val doc = firestore.collection("users").document(uid).get().await()
+        val online = doc.getBoolean("isOnline") ?: false
+        val lastActive = doc.getLong("lastActive") ?: 0L
+        // Consider online if lastActive within 2 minutes
+        return online && (System.currentTimeMillis() - lastActive < 2 * 60 * 1000)
+    }
 }

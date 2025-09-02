@@ -14,5 +14,6 @@ data class User(
     val interests: List<String> = emptyList(),
     val distance: Int? = null,
     val isOnline: Boolean = false,
+    val lastActive: Long = 0L,
     val filterPreferences: UserFilterPreferences? = null
 )
