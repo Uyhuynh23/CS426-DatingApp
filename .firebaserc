@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "cs426-dating-app",
+    "staging": "cs426-dating-app"
+  },
+  "targets": {},
+  "etags": {}
+}
