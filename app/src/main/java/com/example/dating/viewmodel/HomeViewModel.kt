@@ -45,24 +45,11 @@ class HomeViewModel @Inject constructor(
                     return@launch
                 }
                 // Fetch user profiles
-                val users = getUserProfilesByIds(profileIds)
+                val users = homeRepository.getUserProfilesByIds(profileIds)
                 _usersState.value = Resource.Success(users)
             } catch (e: Exception) {
                 _usersState.value = Resource.Failure(e)
             }
-        }
-    }
-
-    private suspend fun getUserProfilesByIds(uids: List<String>): List<User> {
-        return try {
-            val snapshot = db.collection("users")
-                .whereIn("uid", uids)
-                .get()
-                .await()
-            snapshot.documents.mapNotNull { it.toObject(User::class.java) }
-        } catch (e: Exception) {
-            android.util.Log.e("HomeViewModel", "Error fetching users: ", e)
-            emptyList()
         }
     }
 
