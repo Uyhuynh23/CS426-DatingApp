@@ -3,8 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
-    alias(libs.plugins.google.ksp)
     id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
 }
 
 android {
@@ -66,9 +66,11 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.database)
-    ksp("com.google.dagger:hilt-compiler:2.51.1")
+    kapt("com.google.dagger:hilt-compiler:2.51.1")
 
     // Hilt ViewModel cho Compose
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    kapt("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
 
@@ -91,7 +93,6 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-functions") // Add Firebase Functions
     implementation("com.google.firebase:firebase-storage:22.0.0")
     implementation(platform("androidx.compose:compose-bom:2024.04.01"))
     implementation("androidx.compose.material:material-icons-extended")
