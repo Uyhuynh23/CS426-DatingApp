@@ -6,3 +6,8 @@ data class ChatMessage(
     val text: String = "",
     val timestamp: Long = 0L
 )
+
+data class DayMessages(
+    val dayLabel: String,
+    val messages: List<ChatMessage>
+)

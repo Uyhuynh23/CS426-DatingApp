@@ -6,7 +6,8 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import com.example.dating.data.model.User
 import javax.inject.Singleton
-
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.FieldPath
 @Singleton
 class HomeRepository @Inject constructor(
     private val db: FirebaseFirestore
@@ -31,7 +32,7 @@ class HomeRepository @Inject constructor(
         val allUsers = mutableListOf<User>()
         for (batch in batches) {
             val snapshot = db.collection("users")
-                .whereIn(com.google.firebase.firestore.FieldPath.documentId(), batch)
+                .whereIn(FieldPath.documentId(), batch)
                 .get().await()
             val users = snapshot.documents.mapNotNull { doc ->
                 val data = doc.data ?: return@mapNotNull null
@@ -54,4 +55,5 @@ class HomeRepository @Inject constructor(
         }
         return allUsers
     }
+
 }
