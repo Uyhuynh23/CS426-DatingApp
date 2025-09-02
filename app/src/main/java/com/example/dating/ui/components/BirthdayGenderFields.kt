@@ -1,5 +1,6 @@
 package com.example.dating.ui.components
 
+import android.util.Log
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -16,6 +17,7 @@ fun BirthdayGenderFields(
     isEditMode: Boolean,
     showCalendar: Boolean,
     onShowCalendar: () -> Unit,
+    onBirthdayChange: (String) -> Unit,
     onGenderChange: (String) -> Unit
 ) {
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -29,10 +31,21 @@ fun BirthdayGenderFields(
                 onValueChange = {},
                 label = { Text("Birthday") },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = isEditMode) { if (isEditMode) onShowCalendar() },
+                    .fillMaxWidth(),
                 enabled = isEditMode,
-                readOnly = !isEditMode
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = {
+                        if (isEditMode) {
+                            onShowCalendar()
+                        }
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_calendar),
+                            contentDescription = "Open Calendar"
+                        )
+                    }
+                }
             )
         }
         var expanded by remember { mutableStateOf(false) }
@@ -46,12 +59,15 @@ fun BirthdayGenderFields(
                 onValueChange = {},
                 label = { Text("Gender") },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (isEditMode) Modifier.clickable { expanded = true } else Modifier),
+                    .fillMaxWidth(),
                 enabled = isEditMode,
                 readOnly = !isEditMode,
                 trailingIcon = {
-                    IconButton(onClick = { if (isEditMode) expanded = true }) {
+                    IconButton(onClick = {
+                        if (isEditMode) {
+                            expanded = true
+                        }
+                    }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_drop_down),
                             contentDescription = "Dropdown"

@@ -33,11 +33,20 @@ import com.example.dating.ui.theme.AppColors
 @Composable
 fun CustomCalendarDialog(
     onDateSelected: (Date) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    date: Date? = null
 ) {
-    var currentDate by remember { mutableStateOf(Calendar.getInstance()) }
+    val initialCalendar = remember(date) {
+        Calendar.getInstance().apply {
+            if (date != null) {
+                time = date
+            }
+        }
+    }
+    var currentDate by remember { mutableStateOf(initialCalendar) }
     var visibleMonth by remember { mutableStateOf(currentDate.timeInMillis) }
-    var selectedDate by remember { mutableStateOf<Int?>(null) }
+    // Fix: selectedDate can be null, so use Int? type
+    var selectedDate by remember { mutableStateOf<Int?>(currentDate.get(Calendar.DAY_OF_MONTH)) }
     var showYearPicker by remember { mutableStateOf(false) }
     var showMonthPicker by remember { mutableStateOf(false) }
     var animationDirection by remember { mutableStateOf(0) }
