@@ -1,5 +1,7 @@
 package com.example.dating.ui.profile
 
+import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -53,23 +55,35 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import com.example.dating.ui.theme.AppColors
 import androidx.compose.foundation.BorderStroke
+import com.example.dating.viewmodel.HomeViewModel
 
 data class Interest(
     val name: String,
     val icon: Int
 )
 
+@SuppressLint("UnrememberedGetBackStackEntry")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
     navController: NavController,
     userUid: String? = null,
-    viewModel: UserViewModel = hiltViewModel()
+    viewModel: UserViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel()
 ) {
     LaunchedEffect(userUid) { viewModel.observeUser(userUid) }
 
     val user by viewModel.user.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    val matchFoundUserId by homeViewModel.matchFoundUserId.collectAsState()
+    LaunchedEffect(matchFoundUserId) {
+        matchFoundUserId?.let { id ->
+            navController.navigate("match/$id")
+            homeViewModel.resetMatchFoundUserId()
+        }
+    }
+
 
     when {
         isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -79,7 +93,11 @@ fun UserProfileScreen(
         user != null -> UserProfileContent(
             navController = navController,
             user = user!!,
-            onSwipeDone = { navController.navigateUp() },
+            homeViewModel = homeViewModel,
+            onSwipeDone = {
+                homeViewModel.nextProfile()
+                navController.navigateUp()
+            },
             onSeeAll = { images ->
                 navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(images))
                 navController.navigate(Screen.PhotoViewer.route(0))
@@ -101,6 +119,7 @@ fun UserProfileScreen(
 private fun UserProfileContent(
     navController: NavController,
     user: User,
+    homeViewModel: HomeViewModel,
     onSwipeDone: () -> Unit,
     onSeeAll: (List<String>) -> Unit,
     onImageClick: (Int, List<String>) -> Unit
@@ -114,6 +133,21 @@ private fun UserProfileContent(
     val offsetY = remember { Animatable(0f) }
     val threshold = 200f
     val rotation = (offsetX.value / 15).coerceIn(-25f, 25f)
+
+    fun handleProfileAction(isLike: Boolean) {
+        if (isLike) {
+            user.uid?.let { uid ->
+                homeViewModel.likeProfile(uid)
+            }
+        }
+        homeViewModel.nextProfile()
+    }
+
+    suspend fun animateSwipe(offsetX: Animatable<Float, *>, direction: Float) {
+        offsetX.animateTo(direction * 400f, tween(300))
+        offsetX.snapTo(0f)
+        onSwipeDone()
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -137,14 +171,12 @@ private fun UserProfileContent(
                                     scope.launch {
                                         when {
                                             offsetX.value > threshold -> {
-                                                offsetX.animateTo(1200f, tween(260))
-                                                onSwipeDone()
-                                                offsetX.snapTo(0f); offsetY.snapTo(0f)
+                                                handleProfileAction(true)
+                                                animateSwipe(offsetX, 1f)
                                             }
                                             offsetX.value < -threshold -> {
-                                                offsetX.animateTo(-1200f, tween(260))
-                                                onSwipeDone()
-                                                offsetX.snapTo(0f); offsetY.snapTo(0f)
+                                                handleProfileAction(false)
+                                                animateSwipe(offsetX, -1f)
                                             }
                                             else -> {
                                                 offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
@@ -213,9 +245,8 @@ private fun UserProfileContent(
                     shadow = 10.dp
                 ) {
                     scope.launch {
-                        offsetX.animateTo(-1200f, tween(260))
-                        onSwipeDone()
-                        offsetX.snapTo(0f); offsetY.snapTo(0f)
+                        handleProfileAction(false)
+                        animateSwipe(offsetX, -1f)
                     }
                 }
                 ActionButton(
@@ -226,9 +257,8 @@ private fun UserProfileContent(
                     shadow = 16.dp
                 ) {
                     scope.launch {
-                        offsetX.animateTo(1200f, tween(260))
-                        onSwipeDone()
-                        offsetX.snapTo(0f); offsetY.snapTo(0f)
+                        handleProfileAction(true)
+                        animateSwipe(offsetX, 1f)
                     }
                 }
                 ActionButton(
@@ -239,9 +269,8 @@ private fun UserProfileContent(
                     shadow = 10.dp
                 ) {
                     scope.launch {
-                        offsetX.animateTo(1200f, tween(260))
-                        onSwipeDone()
-                        offsetX.snapTo(0f); offsetY.snapTo(0f)
+                        handleProfileAction(true)
+                        animateSwipe(offsetX, 1f)
                     }
                 }
             }

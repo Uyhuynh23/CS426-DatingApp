@@ -62,7 +62,10 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.dating.viewmodel.ProfileViewModel
 
 @Composable
-fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    navController: NavController,
+    homeViewModel: HomeViewModel = hiltViewModel()
+) {
     val usersResource by homeViewModel.usersState.collectAsState()
     val profileIndex by homeViewModel.profileIndex.collectAsState()
     Log.d("HomeScreen", "usersResource: $usersResource")
