@@ -1,9 +1,11 @@
 package com.example.dating.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.dating.data.model.MessagesFilterState
 import com.example.dating.data.model.ConversationPreview
+import com.example.dating.data.model.MessagesFilterState
+import com.example.dating.data.model.filterMessages
 import com.example.dating.data.model.repository.FirebaseMessagesRepository
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,8 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.example.dating.data.model.filterMessages
-import android.util.Log
 
 data class MessagesUiState(
     val isLoading: Boolean = false,
@@ -33,8 +33,6 @@ class MessagesViewModel @Inject constructor(
     val filterState: StateFlow<MessagesFilterState> = _filterState // Change to StateFlow
 
     private var originalMessages = listOf<ConversationPreview>()
-    private var loadedConversations = 0
-    private var totalConversations = 0
 
 
     init {

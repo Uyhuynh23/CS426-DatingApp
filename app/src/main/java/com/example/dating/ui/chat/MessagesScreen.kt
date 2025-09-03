@@ -229,14 +229,10 @@ fun StoryBubble(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .padding(8.dp)
-            .clickable() {
+            .clickable(enabled = hasStory) {
                 if (hasStory) {
                     // Use navController.navigate with a defined Screen route for story viewing
                     navController.navigate("story_viewer/${user.uid}")
-                }
-                else
-                {
-                    navController.navigate("user_profile2/${user.uid}")
                 }
             }
     ) {
