@@ -50,12 +50,13 @@ import coil.compose.AsyncImage
 import com.example.dating.R
 import com.example.dating.data.model.User
 import com.example.dating.navigation.Screen
-import com.example.dating.viewmodel.UserViewModel
+import com.example.dating.viewmodel.HomeViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import com.example.dating.ui.theme.AppColors
 import androidx.compose.foundation.BorderStroke
-import com.example.dating.viewmodel.HomeViewModel
+import com.example.dating.data.model.Resource
 
 data class Interest(
     val name: String,
@@ -68,18 +69,21 @@ data class Interest(
 fun UserProfileScreen(
     navController: NavController,
     userUid: String? = null,
-    viewModel: UserViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(userUid) { viewModel.observeUser(userUid) }
-
     val usersResource by homeViewModel.usersState.collectAsState()
     val profileIndex by homeViewModel.profileIndex.collectAsState()
-
-    val user by viewModel.user.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-
     val matchFoundUserId by homeViewModel.matchFoundUserId.collectAsState()
+
+    val profiles = usersResource.let { res ->
+        when (res) {
+            is Resource.Success -> res.result
+            else -> emptyList()
+        }
+    }
+    val user = profiles.getOrNull(profileIndex)
+    val isLoading = usersResource is Resource.Loading
+
     LaunchedEffect(matchFoundUserId) {
         matchFoundUserId?.let { id ->
             navController.navigate("match/$id")
@@ -87,19 +91,16 @@ fun UserProfileScreen(
         }
     }
 
-
     when {
         isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-
         user != null -> UserProfileContent(
             navController = navController,
-            user = user!!,
+            profiles = profiles,
+            profileIndex = profileIndex,
             homeViewModel = homeViewModel,
             onSwipeDone = {
-                homeViewModel.nextProfile()
-                navController.navigateUp()
             },
             onSeeAll = { images ->
                 navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(images))
@@ -110,186 +111,177 @@ fun UserProfileScreen(
                 navController.navigate(Screen.PhotoViewer.route(index))
             }
         )
-
         else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Cannot load profile")
+            navController.navigateUp()
         }
     }
 }
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UserProfileContent(
     navController: NavController,
-    user: User,
+    profiles: List<User>,
+    profileIndex: Int,
     homeViewModel: HomeViewModel,
     onSwipeDone: () -> Unit,
     onSeeAll: (List<String>) -> Unit,
     onImageClick: (Int, List<String>) -> Unit
 ) {
-    val images = user.imageUrl
-    val hero = user.avatarUrl ?: images.firstOrNull()
+    val currentProfile = profiles.getOrNull(profileIndex)
+    val nextProfile = profiles.getOrNull(profileIndex + 1)
+    val images = currentProfile?.imageUrl ?: emptyList()
+    val nextImages = nextProfile?.imageUrl ?: emptyList()
 
-    // Swipe cho hero
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(0f) }
     val threshold = 200f
-    val rotation = (offsetX.value / 15).coerceIn(-25f, 25f)
+    val rotation = (offsetX.value / 15).coerceIn(-10f, 10f)
 
     fun handleProfileAction(isLike: Boolean) {
         if (isLike) {
-            user.uid?.let { uid ->
+            currentProfile?.uid?.let { uid ->
                 homeViewModel.likeProfile(uid)
             }
         }
         homeViewModel.nextProfile()
     }
 
-    suspend fun animateSwipe(offsetX: Animatable<Float, *>, direction: Float) {
+    suspend fun animateSwipe(direction: Float) {
         offsetX.animateTo(direction * 400f, tween(300))
         offsetX.snapTo(0f)
-        onSwipeDone()
+        offsetY.snapTo(0f)
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.MainBackground),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        contentPadding = PaddingValues(bottom = 0.dp)
+    Box(
+        modifier = Modifier.fillMaxSize().background(AppColors.MainBackground),
+        contentAlignment = Alignment.Center
     ) {
-        // ===== HERO (swipeable) =====
-        item {
-            Box {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(380.dp)
-                        .graphicsLayer { rotationZ = rotation }
-                        .offset { IntOffset(offsetX.value.toInt(), offsetY.value.toInt()) }
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragEnd = {
-                                    scope.launch {
-                                        when {
-                                            offsetX.value > threshold -> {
-                                                handleProfileAction(true)
-                                                animateSwipe(offsetX, 1f)
-                                            }
-                                            offsetX.value < -threshold -> {
-                                                handleProfileAction(false)
-                                                animateSwipe(offsetX, -1f)
-                                            }
-                                            else -> {
-                                                offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
-                                                offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
-                                            }
+        // Next profile luôn nằm dưới
+        if (nextProfile != null) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = 0.95f,
+                            scaleY = 0.95f,
+                            alpha = 0.7f,
+                            translationY = 32f
+                        )
+                        .background(AppColors.MainBackground),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = 0.dp)
+                ) {
+                    item {
+                        ProfileHero(
+                            profile = nextProfile,
+                            navController = navController
+                        )
+                    }
+                    item {
+                        ProfileActionsRow(
+                            onLike = {},
+                            onDislike = {},
+                            onSuperLike = {}
+                        )
+                    }
+                    item {
+                        ProfileInfoCard(
+                            user = nextProfile,
+                            images = nextImages,
+                            onSeeAll = onSeeAll,
+                            onImageClick = onImageClick
+                        )
+                    }
+                }
+            }
+        }
+
+        // Current profile luôn nằm trên + draggable
+        if (currentProfile != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(offsetX.value.toInt(), offsetY.value.toInt()) }
+                    .graphicsLayer { rotationZ = rotation }
+                    .background(AppColors.MainBackground)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragEnd = {
+                                scope.launch {
+                                    when {
+                                        offsetX.value > threshold -> {
+                                            animateSwipe(1f)
+                                            handleProfileAction(true)
+                                        }
+                                        offsetX.value < -threshold -> {
+                                            animateSwipe(-1f)
+                                            handleProfileAction(false)
+                                        }
+                                        else -> {
+                                            offsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                                            offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
                                         }
                                     }
                                 }
-                            ) { _, drag ->
-                                scope.launch {
-                                    offsetX.snapTo(offsetX.value + drag.x)
-                                    offsetY.snapTo(offsetY.value + drag.y)
-                                }
+                            }
+                        ) { _, drag ->
+                            scope.launch {
+                                offsetX.snapTo(offsetX.value + drag.x)
+                                offsetY.snapTo(offsetY.value + drag.y)
                             }
                         }
-                ) {
-                    if (!hero.isNullOrBlank()) {
-                        AsyncImage(
-                            model = hero,
-                            contentDescription = "hero",
-                            placeholder = painterResource(R.drawable.ic_avatar),
-                            error = painterResource(R.drawable.ic_avatar),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(R.drawable.ic_avatar),
-                            contentDescription = "hero-placeholder",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
                     }
-                }
-
-                // Back button
-                IconButton(
-                    onClick = { navController.navigateUp() }
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_back_pink),
-                        contentDescription = "Location",
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.Unspecified
-                    )
-                }
-            }
-        }
-
-        // ===== Row 3 nút
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 52.dp)
-                    .offset(y = (-64).dp)
-                    .zIndex(2f),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                ActionButton(
-                    icon = Icons.Filled.Close,
-                    background = Color.White,
-                    iconTint = Color.Black,
-                    size = 72.dp,
-                    shadow = 10.dp
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = 0.dp)
                 ) {
-                    scope.launch {
-                        handleProfileAction(false)
-                        animateSwipe(offsetX, -1f)
+                    item {
+                        ProfileHero(
+                            profile = currentProfile,
+                            navController = navController
+                        )
                     }
-                }
-                ActionButton(
-                    icon = Icons.Filled.Favorite,
-                    background = AppColors.Text_Pink,
-                    iconTint = Color.White,
-                    size = 96.dp,
-                    shadow = 16.dp
-                ) {
-                    scope.launch {
-                        handleProfileAction(true)
-                        animateSwipe(offsetX, 1f)
+                    item {
+                        ProfileActionsRow(
+                            onLike = {
+                                scope.launch {
+                                    animateSwipe(1f)
+                                    handleProfileAction(true)
+                                }
+                            },
+                            onDislike = {
+                                scope.launch {
+                                    animateSwipe(-1f)
+                                    handleProfileAction(false)
+                                }
+                            },
+                            onSuperLike = {
+                                scope.launch {
+                                    animateSwipe(1f)
+                                    handleProfileAction(true)
+                                }
+                            }
+                        )
                     }
-                }
-                ActionButton(
-                    icon = Icons.Filled.Star,
-                    background = Color(0xFF4A154B),
-                    iconTint = Color.White,
-                    size = 72.dp,
-                    shadow = 10.dp
-                ) {
-                    scope.launch {
-                        handleProfileAction(true)
-                        animateSwipe(offsetX, 1f)
+                    item {
+                        ProfileInfoCard(
+                            user = currentProfile,
+                            images = images,
+                            onSeeAll = onSeeAll,
+                            onImageClick = onImageClick
+                        )
                     }
                 }
             }
-        }
-
-        // ===== Card hồng nhạt (scroll) =====
-        item {
-            ProfileInfoCard(
-                user = user,
-                images = images,
-                onSeeAll = onSeeAll,
-                onImageClick = onImageClick
-            )
         }
     }
 }
+
 
 @Composable
 private fun ActionButton(
@@ -576,5 +568,82 @@ private fun ProfileInfoCard(
 
             Spacer(Modifier.height(20.dp))
         }
+    }
+}
+
+@Composable
+fun ProfileHero(profile: User?, navController: NavController) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(380.dp)
+    ) {
+        val hero = profile?.avatarUrl ?: profile?.imageUrl?.firstOrNull()
+        if (!hero.isNullOrBlank()) {
+            AsyncImage(
+                model = hero,
+                contentDescription = "hero",
+                placeholder = painterResource(R.drawable.ic_avatar),
+                error = painterResource(R.drawable.ic_avatar),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.ic_avatar),
+                contentDescription = "hero-placeholder",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        IconButton(
+            onClick = { navController.navigateUp() }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_back_pink),
+                contentDescription = "Location",
+                modifier = Modifier.size(64.dp),
+                tint = Color.Unspecified
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileActionsRow(
+    onLike: () -> Unit,
+    onDislike: () -> Unit,
+    onSuperLike: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 52.dp)
+            .offset(y = (-64).dp)
+            .zIndex(2f),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ActionButton(
+            icon = Icons.Filled.Close,
+            background = Color.White,
+            iconTint = Color.Black,
+            size = 72.dp,
+            shadow = 10.dp
+        ) { onDislike() }
+        ActionButton(
+            icon = Icons.Filled.Favorite,
+            background = AppColors.Text_Pink,
+            iconTint = Color.White,
+            size = 96.dp,
+            shadow = 16.dp
+        ) { onLike() }
+        ActionButton(
+            icon = Icons.Filled.Star,
+            background = Color(0xFF4A154B),
+            iconTint = Color.White,
+            size = 72.dp,
+            shadow = 10.dp
+        ) { onSuperLike() }
     }
 }
