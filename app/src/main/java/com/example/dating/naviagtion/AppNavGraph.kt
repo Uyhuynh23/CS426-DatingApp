@@ -1,45 +1,44 @@
 package com.example.dating.navigation
 
 import LoginScreen
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.dating.ui.onboarding.OnboardingScreen
-import androidx.compose.material3.Text
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.dating.ui.auth.SignUpScreen
+import androidx.navigation.compose.navigation
+import androidx.navigation.navArgument
+import com.example.dating.ui.auth.EmailScreen
 import com.example.dating.ui.auth.PhoneNumberScreen
+import com.example.dating.ui.auth.SignUpScreen
 import com.example.dating.ui.auth.VerifyCodeScreen
 import com.example.dating.ui.auth.VerifyEmailScreen
-import com.example.dating.ui.auth.EmailScreen
-import com.example.dating.ui.mainscreens.FavoriteScreen
-import com.example.dating.ui.mainscreens.MatchScreen
+import com.example.dating.ui.chat.ChatDetailScreen
 import com.example.dating.ui.chat.MessagesScreen
+import com.example.dating.ui.mainscreens.FavoriteScreen
+import com.example.dating.ui.mainscreens.HomeScreen
+import com.example.dating.ui.mainscreens.MatchScreen
+import com.example.dating.ui.onboarding.OnboardingScreen
+import com.example.dating.ui.profile.EnableNotificationScreen
 import com.example.dating.ui.profile.GenderSelectionScreen
 import com.example.dating.ui.profile.InterestSelectionScreen
-import com.example.dating.ui.profile.EnableNotificationScreen
+import com.example.dating.ui.profile.PhotoViewerScreen
+import com.example.dating.ui.profile.PostStoryScreen
+import com.example.dating.ui.profile.ProfileDetailsScreen
 import com.example.dating.ui.profile.ProfileScreen
 import com.example.dating.ui.profile.SearchFriendScreen
-import com.example.dating.viewmodel.AuthViewModel
-import com.example.dating.ui.mainscreens.HomeScreen
-import com.example.dating.ui.profile.ProfileDetailsScreen
-import com.example.dating.viewmodel.HomeViewModel
-import com.example.dating.viewmodel.FavoriteViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.example.dating.ui.chat.ChatDetailScreen
-
-import androidx.navigation.compose.navigation
-import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.ui.profile.UserProfileScreen
-import com.example.dating.ui.profile.PhotoViewerScreen
-import com.example.dating.viewmodel.MessagesViewModel
+import com.example.dating.ui.profile.UserProfileScreen2
+import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.viewmodel.ChatViewModel
-import com.example.dating.ui.profile.PostStoryScreen
+import com.example.dating.viewmodel.FavoriteViewModel
+import com.example.dating.viewmodel.HomeViewModel
+import com.example.dating.viewmodel.MessagesViewModel
+import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.viewmodel.StoryViewModel
 
 @Composable
@@ -192,6 +191,31 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                     homeViewModel = homeViewModel
                 )
             }
+
+            composable(
+                route = "user_profile2/{uid}",
+                arguments = listOf(navArgument("uid") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.Home.route)
+                }
+                val favoriteViewModel: FavoriteViewModel = hiltViewModel(parentEntry)
+                val uid = backStackEntry.arguments?.getString("uid")
+                UserProfileScreen2(
+                    navController = navController,
+                    userUid = uid,
+                    favoriteViewModel = favoriteViewModel
+                )
+            }
+
+            composable(Screen.ProfileDetails.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("root_graph")
+                }
+                val profileViewModel: ProfileViewModel = hiltViewModel(parentEntry)
+                ProfileDetailsScreen(navController = navController, profileViewModel)
+            }
+
 
             // Photo viewer
             composable(
