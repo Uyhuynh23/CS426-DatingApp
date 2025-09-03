@@ -47,6 +47,8 @@ dependencies {
     implementation("androidx.credentials:credentials:1.2.2")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.36.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 
     //Country Code Picker
     implementation ("com.hbb20:ccp:2.6.0")

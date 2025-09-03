@@ -1,17 +1,29 @@
 package com.example.dating.viewmodel
 
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
+import android.content.Context
+import android.location.Geocoder
+import androidx.compose.runtime.MutableState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dating.data.model.Resource
+import com.example.dating.data.model.User
 import com.example.dating.data.model.repository.FavoriteRepository
 import com.example.dating.data.model.repository.HomeRepository
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.MultiplePermissionsState
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Priority
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.example.dating.data.model.User
-import com.example.dating.data.model.Resource
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.util.Locale
+import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -95,5 +107,59 @@ class HomeViewModel @Inject constructor(
 
     fun resetMatchFoundUserId() {
         _matchFoundUserId.value = null
+    }
+
+    @OptIn(ExperimentalPermissionsApi::class)
+    suspend fun saveUserLocationIfPermitted(
+        context: Context,
+        locationClient: FusedLocationProviderClient,
+        locationPermissionsState: MultiplePermissionsState,
+        locationSaved: MutableState<Boolean>
+    ) {
+        if (locationPermissionsState.allPermissionsGranted && !locationSaved.value) {
+            try {
+                val fineGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                val coarseGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                if (fineGranted || coarseGranted) {
+                    val uid = getCurrentUserId() ?: return
+                    withContext(Dispatchers.IO) {
+                        val location = locationClient.getCurrentLocation(
+                            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                            null
+                        ).await()
+                        if (location != null) {
+                            val geocoder = Geocoder(context, Locale.getDefault())
+                            val addresses = try {
+                                geocoder.getFromLocation(
+                                    location.latitude,
+                                    location.longitude,
+                                    1
+                                )
+                            } catch (e: IOException) {
+                                emptyList<android.location.Address>()
+                            }
+                            val city = addresses?.getOrNull(0)?.adminArea.orEmpty()
+                            val district = addresses?.getOrNull(0)?.subAdminArea.orEmpty()
+                            val userLocation = mapOf(
+                                "city" to city,
+                                "district" to district,
+                                "lat" to location.latitude,
+                                "lng" to location.longitude
+                            )
+                            homeRepository.saveUserLocation(uid, userLocation)
+                            locationSaved.value = true
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Log error if needed
+            }
+        }
     }
 }
