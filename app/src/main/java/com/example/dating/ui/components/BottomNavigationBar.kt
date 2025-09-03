@@ -56,7 +56,7 @@ fun BottomNavigationBar(navController: NavController, isPageActive: Int) {
             BottomNavIcon(
                 icon = Icons.Default.ViewModule,
                 isActive = (isPageActive == 0)
-            ) { navController.navigate("home") }
+            ) { navController.popBackStack("home", inclusive = false) }
 
             BottomNavIcon(
                 icon = Icons.Default.Favorite,

@@ -2,39 +2,63 @@ package com.example.dating.ui.chat
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import java.text.SimpleDateFormat
-import java.util.*
-import com.example.dating.viewmodel.ChatViewModel
 import com.example.dating.data.model.ChatMessage
-import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.dating.ui.theme.AppColors
-
+import com.example.dating.viewmodel.ChatViewModel
+import com.google.firebase.auth.FirebaseAuth
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 
 private val PinkPeer = Color(0xFFFFEEF6)
@@ -49,15 +73,18 @@ fun ChatDetailScreen(
     navController: NavController,
     viewModel: ChatViewModel
 ) {
-    val messages by viewModel.messages.collectAsState()
     val peerName by viewModel.peerName.collectAsState(initial = "Grace")
     val peerAvatar by viewModel.peerAvatar.collectAsState(initial = null)
     val groupedMessages by viewModel.groupedMessages.collectAsState()
+    val lastActive by viewModel.lastActive.collectAsState()
 
     LaunchedEffect(conversationId) {
         viewModel.loadMessages(conversationId)
         viewModel.loadPeer(conversationId)
     }
+
+    // Online detection: consider online if lastActive within 2 minutes
+    val isOnline = lastActive?.let { System.currentTimeMillis() - it < 2 * 60 * 1000 } ?: false
 
     // đảm bảo thứ tự cũ -> mới, và tự cuộn xuống cuối
     val listState = rememberLazyListState()
@@ -80,7 +107,9 @@ fun ChatDetailScreen(
             title = "Messages",
             name = peerName,
             avatarUrl = peerAvatar,
-            online = true,
+            online = isOnline,
+            navController = navController,
+            lastActive = lastActive,
             onBack = { navController.popBackStack() },
             onMore = { /*TODO*/ }
         )
@@ -130,6 +159,8 @@ private fun ChatHeaderWhite(
     name: String,
     avatarUrl: String?,
     online: Boolean,
+    navController: NavController,
+    lastActive: Long? = null,
     onBack: () -> Unit,
     onMore: () -> Unit
 ) {
@@ -167,6 +198,7 @@ private fun ChatHeaderWhite(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
+                    .clickable {  }
             )
             Spacer(Modifier.width(12.dp))
             Column {
@@ -186,9 +218,33 @@ private fun ChatHeaderWhite(
                         Spacer(Modifier.width(6.dp))
                         Text("Online", color = Subtle, fontSize = 12.sp)
                     }
+                } else if (lastActive != null && lastActive != 0L) {
+                    Text(
+                        text = "Last active ${formatTimeAgo(lastActive)}",
+                        color = Subtle,
+                        fontSize = 12.sp
+                    )
+                } else {
+                    Text(
+                        text = "Last active unknown",
+                        color = Subtle,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
+    }
+}
+
+private fun formatTimeAgo(lastActive: Long?): String {
+    if (lastActive == null || lastActive == 0L) return "unknown"
+    val now = System.currentTimeMillis()
+    val diff = now - lastActive
+    return when {
+        diff < 60_000 -> "just now"
+        diff < 3600_000 -> "${diff / 60_000}m ago"
+        diff < 86400_000 -> "${diff / 3600_000}h ago"
+        else -> "${diff / 86400_000}d ago"
     }
 }
 

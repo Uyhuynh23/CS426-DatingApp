@@ -56,6 +56,9 @@ class UserViewModel @Inject constructor(
             }
     }
 
+    suspend fun isUserOnline(uid: String): Boolean {
+        return userRepository.isUserOnline(uid)
+    }
 
     override fun onCleared() {
         super.onCleared()

@@ -62,13 +62,20 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.dating.viewmodel.ProfileViewModel
 
 @Composable
-fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    navController: NavController,
+    homeViewModel: HomeViewModel = hiltViewModel()
+) {
     val usersResource by homeViewModel.usersState.collectAsState()
-    val profileIndex = rememberSaveable { mutableStateOf(0) }
+    val profileIndex by homeViewModel.profileIndex.collectAsState()
+    Log.d("HomeScreen", "usersResource: $usersResource")
+    Log.d("HomeScreen", "profileIndex: $profileIndex")
+
+
 
     // Helper functions
-    fun handleProfileAction(isLike: Boolean, profileIndex: MutableState<Int>, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
-        val currentProfile = profiles.getOrNull(profileIndex.value)
+    fun handleProfileAction(isLike: Boolean, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
+        val currentProfile = profiles.getOrNull(profileIndex)
         if (currentProfile != null) {
             if (isLike) {
                 val likedUserId = currentProfile.uid
@@ -81,7 +88,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                     }
                 }
             }
-            profileIndex.value++
+            homeViewModel.nextProfile()
         }
     }
     suspend fun animateSwipe(offsetX: Animatable<Float, *>, direction: Float) {
@@ -89,15 +96,21 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
         offsetX.snapTo(0f)
     }
 
+
+
     // Observe matchFoundUserId and navigate if a match is found
     val matchFoundUserId by homeViewModel.matchFoundUserId.collectAsState()
+    val matchIdHandled = remember { mutableStateOf(false) }
     LaunchedEffect(matchFoundUserId) {
-        if (matchFoundUserId != null) {
+        Log.d("HomeScreen", "LaunchedEffect triggered: matchFoundUserId=$matchFoundUserId, matchIdHandled=${matchIdHandled.value}")
+        if (matchFoundUserId != null && !matchIdHandled.value) {
+            Log.d("HomeScreen", "Navigating to match/${matchFoundUserId}")
+            matchIdHandled.value = true
             navController.navigate("match/${matchFoundUserId}")
+            Log.d("HomeScreen", "Resetting matchFoundUserId after navigation")
             homeViewModel.resetMatchFoundUserId()
         }
     }
-
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
     Scaffold(
@@ -111,7 +124,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
                 .padding(paddingValues)
                 .background(AppColors.MainBackground)
         ) {
-            HomeHeader(navController)
+            HomeHeader(navController, homeViewModel)
             when (usersResource) {
                 is Resource.Loading -> {
                     Box(
@@ -135,38 +148,54 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
 
                 is Resource.Success -> {
                     val users = (usersResource as Resource.Success<List<User>>).result
-                    // You can use your ProfileCard and ActionButtons here, or a grid like FavoriteScreen
+                    val currentProfile = users.getOrNull(profileIndex)
+                    val nextProfile = users.getOrNull(profileIndex + 1)
+                    if (currentProfile == null && nextProfile == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(900.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No profiles available", color = Color.Gray)
+                        }
+                        return@Column
+                    }
+                    // Create shared offsetX and offsetY
+                    val offsetX = remember { Animatable(0f) }
+                    val offsetY = remember { Animatable(0f) }
                     Box(modifier = Modifier.weight(1f)) {
                         ProfileCard(
                             profiles = users,
                             profileIndex = profileIndex,
-                            handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                            handleProfileAction = { isLike, profiles, homeViewModel ->
                                 handleProfileAction(
                                     isLike,
-                                    profileIndex,
                                     profiles,
                                     homeViewModel,
                                     navController
                                 )
                             },
-                            animateSwipe = ::animateSwipe,
-                            navController = navController // Pass navController here
+                            animateSwipe = { direction -> animateSwipe(offsetX, direction) },
+                            offsetX = offsetX,
+                            offsetY = offsetY,
+                            navController = navController
                         )
                     }
-
                     ActionButtons(
                         profiles = users,
                         profileIndex = profileIndex,
-                        handleProfileAction = { isLike, profileIndex, profiles, homeViewModel ->
+                        handleProfileAction = { isLike, profiles, homeViewModel ->
                             handleProfileAction(
                                 isLike,
-                                profileIndex,
                                 profiles,
                                 homeViewModel,
                                 navController
                             )
                         },
-                        animateSwipe = ::animateSwipe
+                        animateSwipe = { direction -> animateSwipe(offsetX, direction) },
+                        offsetX = offsetX,
+                        homeViewModel = homeViewModel
                     )
                 }
             }
@@ -176,7 +205,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = hilt
 }
 
 @Composable
-fun HomeHeader(navController: NavController) {
+fun HomeHeader(navController: NavController, homeViewModel: HomeViewModel) {
     val showFilterDialog = remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
@@ -210,15 +239,17 @@ fun HomeHeader(navController: NavController) {
     }
     val userViewModel: ProfileViewModel = hiltViewModel()
     val currentUid = userViewModel.getCurrentUserId().orEmpty()
-    android.util.Log.d("HomeHeader", "Current UID: $currentUid")
+    Log.d("HomeHeader", "Current UID: $currentUid")
     if (showFilterDialog.value) {
         com.example.dating.ui.components.FilterDialog(
             show = showFilterDialog.value,
             onDismiss = { showFilterDialog.value = false },
             userViewModel = userViewModel,
             currentUid = currentUid,
-            onApply = { selectedInterest, location, distance, ageRange ->
-                // TODO: Apply filter logic here
+            onApply = { selectedInterest, location, distance, ageRange, filterChanged ->
+                if (filterChanged) {
+                    homeViewModel.fetchHome()
+                }
                 showFilterDialog.value = false
             }
         )
@@ -228,14 +259,16 @@ fun HomeHeader(navController: NavController) {
 @Composable
 fun ProfileCard(
     profiles: List<User>,
-    profileIndex: MutableState<Int>,
-    handleProfileAction: suspend (Boolean, MutableState<Int>, List<User>, HomeViewModel) -> Unit,
-    animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
+    profileIndex: Int,
+    handleProfileAction: (Boolean, List<User>, HomeViewModel) -> Unit,
+    animateSwipe: suspend (Float) -> Unit,
+    offsetX: Animatable<Float, *>,
+    offsetY: Animatable<Float, *>,
     homeViewModel: HomeViewModel = viewModel(),
     navController: NavController
 ) {
-    val currentProfile = profiles.getOrNull(profileIndex.value)
-    val nextProfile = profiles.getOrNull(profileIndex.value + 1)
+    val currentProfile = profiles.getOrNull(profileIndex)
+    val nextProfile = profiles.getOrNull(profileIndex + 1)
     val currentUid = currentProfile?.uid
 
     if (currentProfile == null && nextProfile == null) {
@@ -251,8 +284,6 @@ fun ProfileCard(
     }
 
     val scope = rememberCoroutineScope()
-    val offsetX = remember { Animatable(0f) }
-    val offsetY = remember { Animatable(0f) }
     val isDragging = remember { mutableStateOf(false) }
     val likeProgress = (offsetX.value / 200f).coerceIn(0f, 1f)
     val dislikeProgress = (-offsetX.value / 200f).coerceIn(0f, 1f)
@@ -304,7 +335,7 @@ fun ProfileCard(
                             }
                         )
                     }
-                    .pointerInput(profileIndex.value) {
+                    .pointerInput(profileIndex) {
                         detectDragGestures(
                             onDragStart = { isDragging.value = true },
                             onDragEnd = {
@@ -312,14 +343,14 @@ fun ProfileCard(
                                 scope.launch {
                                     when {
                                         offsetX.value > threshold -> {
-                                            animateSwipe(offsetX, 1f)
+                                            animateSwipe(1f)
                                             offsetY.snapTo(0f)
-                                            handleProfileAction(true, profileIndex, profiles, homeViewModel)
+                                            handleProfileAction(true, profiles, homeViewModel)
                                         }
                                         offsetX.value < -threshold -> {
-                                            animateSwipe(offsetX, -1f)
+                                            animateSwipe(-1f)
                                             offsetY.snapTo(0f)
-                                            handleProfileAction(false, profileIndex, profiles, homeViewModel)
+                                            handleProfileAction(false, profiles, homeViewModel)
 
                                         }
                                         else -> {
@@ -473,14 +504,13 @@ private fun ProfileCardContent(
 @Composable
 fun ActionButtons(
     profiles: List<User>,
-    profileIndex: MutableState<Int>,
-    handleProfileAction: suspend (Boolean, MutableState<Int>, List<User>, HomeViewModel) -> Unit,
-    animateSwipe: suspend (Animatable<Float, *>, Float) -> Unit,
+    profileIndex: Int,
+    handleProfileAction: (Boolean, List<User>, HomeViewModel) -> Unit,
+    animateSwipe: suspend (Float) -> Unit,
+    offsetX: Animatable<Float, *>,
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val scope = rememberCoroutineScope()
-    val offsetX = remember { Animatable(0f) }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -497,8 +527,8 @@ fun ActionButtons(
             shadow = 8.dp
         ) {
             scope.launch {
-                handleProfileAction(false, profileIndex, profiles, homeViewModel)
-                animateSwipe(offsetX, -1f) // Pass direction explicitly
+                animateSwipe(-1f)
+                handleProfileAction(false, profiles, homeViewModel)
             }
         }
         // Super Like Button
@@ -510,11 +540,11 @@ fun ActionButtons(
             shadow = 12.dp
         ) {
             scope.launch {
-                handleProfileAction(true, profileIndex, profiles, homeViewModel)
-                animateSwipe(offsetX, 1f) // Pass direction explicitly
+                animateSwipe(1f)
+                handleProfileAction(true, profiles, homeViewModel)
             }
         }
-        // Like Button (calls a different method for clarity)
+        // Like Button
         ActionButton(
             icon = Icons.Default.Star,
             background = Color(0xFF4A154B),
@@ -523,8 +553,8 @@ fun ActionButtons(
             shadow = 8.dp
         ) {
             scope.launch {
-                handleProfileAction(true, profileIndex, profiles, homeViewModel)
-                animateSwipe(offsetX, 1f) // Pass direction explicitly
+                animateSwipe(1f)
+                handleProfileAction(true, profiles, homeViewModel)
             }
         }
     }

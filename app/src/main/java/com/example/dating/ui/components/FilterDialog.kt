@@ -24,12 +24,12 @@ fun FilterDialog(
     onDismiss: () -> Unit,
     userViewModel: ProfileViewModel,
     currentUid: String,
-    onApply: (selectedInterest: String, location: String, distance: Float, ageRange: ClosedFloatingPointRange<Float>) -> Unit
+    onApply: (selectedInterest: String, location: String, distance: Float, ageRange: ClosedFloatingPointRange<Float>, filterChanged: Boolean) -> Unit
 ) {
     if (!show) return
     val userState by userViewModel.user.collectAsState()
     val filterPrefs = userState?.filterPreferences
-    var selectedInterest by remember { mutableStateOf(filterPrefs?.preferredGender ?: "Female") }
+    var selectedInterest by remember { mutableStateOf(filterPrefs?.preferredGender ?: "Woman") }
     var location by remember { mutableStateOf(userState?.location ?: "Chicago, USA") }
     var distance by remember { mutableStateOf(filterPrefs?.maxDistance?.toFloat() ?: 40f) }
     var ageRange by remember { mutableStateOf((filterPrefs?.minAge?.toFloat() ?: 20f)..(filterPrefs?.maxAge?.toFloat() ?: 28f)) }
@@ -39,14 +39,15 @@ fun FilterDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val prefs = UserFilterPreferences(
+                    val newPrefs = UserFilterPreferences(
                         preferredGender = selectedInterest,
                         minAge = ageRange.start.toInt(),
                         maxAge = ageRange.endInclusive.toInt(),
                         maxDistance = distance.toInt()
                     )
-                    userViewModel.updateFilterPreferences(currentUid, prefs) { /* handle result if needed */ }
-                    onApply(selectedInterest, location, distance, ageRange)
+                    val filterChanged = newPrefs != filterPrefs
+                    userViewModel.updateFilterPreferences(currentUid, newPrefs) { /* handle result if needed */ }
+                    onApply(selectedInterest, location, distance, ageRange, filterChanged)
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -69,7 +70,7 @@ fun FilterDialog(
             ) {
                 Text("Filters", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 TextButton(onClick = {
-                    selectedInterest = "Female"
+                    selectedInterest = "Woman"
                     location = "Chicago, USA"
                     distance = 40f
                     ageRange = 20f..28f
@@ -84,8 +85,8 @@ fun FilterDialog(
                 Text("Interested in", fontSize = 16.sp, color = Color.Gray, modifier = Modifier.align(Alignment.Start))
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    FilterSegmentButton("Female", selectedInterest == "Female", onClick = { selectedInterest = "Female" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
-                    FilterSegmentButton("Male", selectedInterest == "Male", onClick = { selectedInterest = "Male" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
+                    FilterSegmentButton("Woman", selectedInterest == "Woman", onClick = { selectedInterest = "Woman" }, modifier = Modifier.weight(1.2f).padding(horizontal = 2.dp))
+                    FilterSegmentButton("Man", selectedInterest == "Man", onClick = { selectedInterest = "Man" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                     FilterSegmentButton("Both", selectedInterest == "Both", onClick = { selectedInterest = "Both" }, modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                 }
                 Spacer(modifier = Modifier.height(24.dp))

@@ -27,6 +27,18 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun login(email: String, password: String): Resource<FirebaseUser> {
         return try {
             val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
+            // Set user online status after login
+            result.user?.let { user ->
+                val uid = user.uid
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users").document(uid)
+                    .update(
+                        mapOf(
+                            "isOnline" to true,
+                            "lastActive" to System.currentTimeMillis()
+                        )
+                    ).await()
+            }
             Resource.Success(result.user!!)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -71,6 +83,18 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override fun logout() {
+        // Set user offline status before logout
+        val uid = firebaseAuth.currentUser?.uid
+        if (uid != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(uid)
+                .update(
+                    mapOf(
+                        "isOnline" to false,
+                        "lastActive" to System.currentTimeMillis()
+                    )
+                )
+        }
         firebaseAuth.signOut()
     }
 

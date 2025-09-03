@@ -25,6 +25,9 @@ class HomeViewModel @Inject constructor(
     private val _usersState = MutableStateFlow<Resource<List<User>>>(Resource.Loading)
     val usersState: StateFlow<Resource<List<User>>> = _usersState
 
+    private val _profileIndex = MutableStateFlow(0)
+    val profileIndex: StateFlow<Int> = _profileIndex
+
     init {
         fetchHome()
     }
@@ -33,21 +36,25 @@ class HomeViewModel @Inject constructor(
         return FirebaseAuth.getInstance().currentUser?.uid
     }
 
-    private fun fetchHome() {
+    fun fetchHome() {
+        _profileIndex.value = 0
         val currentUserId = getCurrentUserId() ?: return
+        android.util.Log.d("HomeViewModel", "fetchHome called for uid=$currentUserId")
         viewModelScope.launch {
             try {
                 _usersState.value = Resource.Loading
-                // Get list of user IDs for home (excluding current user)
                 val profileIds = homeRepository.fetchProfiles().filter { it != currentUserId }
+                android.util.Log.d("HomeViewModel", "Fetched profileIds: $profileIds")
                 if (profileIds.isEmpty()) {
+                    android.util.Log.d("HomeViewModel", "No profiles found for uid=$currentUserId")
                     _usersState.value = Resource.Success(emptyList())
                     return@launch
                 }
-                // Fetch user profiles
                 val users = homeRepository.getUserProfilesByIds(profileIds)
+                android.util.Log.d("HomeViewModel", "Fetched user profiles: $users")
                 _usersState.value = Resource.Success(users)
             } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error in fetchHome", e)
                 _usersState.value = Resource.Failure(e)
             }
         }
@@ -72,6 +79,18 @@ class HomeViewModel @Inject constructor(
                 _usersState.value = Resource.Failure(e as? Exception ?: Exception(e.message))
             }
         }
+    }
+
+    fun setProfileIndex(index: Int) {
+        _profileIndex.value = index
+    }
+
+    fun nextProfile() {
+        _profileIndex.value++
+    }
+
+    fun resetProfileIndex() {
+        _profileIndex.value = 0
     }
 
     fun resetMatchFoundUserId() {

@@ -33,6 +33,7 @@ import com.example.dating.ui.components.BirthdayGenderFields
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.viewmodel.StoryViewModel
+import com.example.dating.viewmodel.AuthViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -71,7 +72,8 @@ import androidx.compose.ui.text.input.KeyboardType
 fun ProfileDetailsScreen(
     navController: NavController,
     profileViewModel: ProfileViewModel = hiltViewModel(),
-    storyViewModel: StoryViewModel = hiltViewModel() // <-- Add StoryViewModel
+    storyViewModel: StoryViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel() // <-- Add AuthViewModel
 ) {
     val user by profileViewModel.user.collectAsState()
     val updateState by profileViewModel.updateState.collectAsState()
@@ -116,7 +118,8 @@ fun ProfileDetailsScreen(
                         navController = navController,
                         initialProfile = it,
                         profileViewModel = profileViewModel,
-                        storyViewModel = storyViewModel // <-- Pass StoryViewModel
+                        storyViewModel = storyViewModel,
+                        authViewModel = authViewModel // <-- Pass AuthViewModel
                     )
                 }
             }
@@ -129,7 +132,8 @@ fun ProfileContent(
     navController: NavController,
     initialProfile: User,
     profileViewModel: ProfileViewModel,
-    storyViewModel: StoryViewModel
+    storyViewModel: StoryViewModel,
+    authViewModel: AuthViewModel // <-- Add AuthViewModel
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
@@ -169,19 +173,34 @@ fun ProfileContent(
             .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header: Back Arrow only
+        // Header: Back Arrow and Log out button
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp, start = 8.dp, end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = AppColors.Text_Pink
+                    )
+                }
+                TextButton(
+                    onClick = {
+                        authViewModel.logout()
+                        navController.navigate("login") {
+                            popUpTo("root_graph") { inclusive = true }
+                        }
+                    }
+                ) {
+                    Text(
+                        text = "Log out",
+                        color = AppColors.Text_Pink,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
