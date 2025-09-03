@@ -73,6 +73,9 @@ fun UserProfileScreen(
 ) {
     LaunchedEffect(userUid) { viewModel.observeUser(userUid) }
 
+    val usersResource by homeViewModel.usersState.collectAsState()
+    val profileIndex by homeViewModel.profileIndex.collectAsState()
+
     val user by viewModel.user.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 

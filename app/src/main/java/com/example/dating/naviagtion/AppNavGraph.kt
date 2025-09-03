@@ -181,8 +181,16 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 route = "user_profile/{uid}",
                 arguments = listOf(navArgument("uid") { type = NavType.StringType })
             ) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.Home.route)
+                }
+                val homeViewModel: HomeViewModel = hiltViewModel(parentEntry)
                 val uid = backStackEntry.arguments?.getString("uid")
-                UserProfileScreen(navController = navController, userUid = uid)
+                UserProfileScreen(
+                    navController = navController,
+                    userUid = uid,
+                    homeViewModel = homeViewModel
+                )
             }
 
             // Photo viewer
