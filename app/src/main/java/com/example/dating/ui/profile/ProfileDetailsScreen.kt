@@ -133,7 +133,7 @@ fun ProfileContent(
     initialProfile: User,
     profileViewModel: ProfileViewModel,
     storyViewModel: StoryViewModel,
-    authViewModel: AuthViewModel // <-- Add AuthViewModel
+    authViewModel: AuthViewModel
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
@@ -166,6 +166,10 @@ fun ProfileContent(
     var saveError by remember { mutableStateOf<String?>(null) }
 
     val allInterests = remember { ALL_INTERESTS }
+
+    // Observe user's own stories
+    val myStories by storyViewModel.myStories.collectAsState()
+    val validStories = myStories.filter { it.expiresAt ?: 0 > System.currentTimeMillis() }
 
     LazyColumn(
         modifier = Modifier
@@ -272,6 +276,50 @@ fun ProfileContent(
                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.Text_Pink)
             ) {
                 Text("Add Story", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Show user's own story bubble if any
+        item {
+            if (validStories.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 4.dp)
+                        .clickable {
+                            navController.navigate("story_viewer/${initialProfile.uid}")
+                        },
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Main_Secondary1)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        // Show avatar with pink border
+                        Image(
+                            painter = rememberAsyncImagePainter(initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()),
+                            contentDescription = "Your Story",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .border(3.dp, AppColors.Text_Pink, CircleShape)
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = "Your Story",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = AppColors.Text_Pink
+                            )
+                            Text(
+                                text = "Tap to view",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
             }
         }
 
