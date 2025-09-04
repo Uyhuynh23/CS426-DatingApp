@@ -9,6 +9,7 @@ import com.example.dating.data.model.Resource
 import com.example.dating.data.model.User
 import com.example.dating.data.model.repository.FavoriteRepository
 import com.example.dating.data.model.repository.HomeRepository
+import com.example.dating.data.model.repository.RecommendationRepository
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -28,7 +29,8 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
-    private val homeRepository: HomeRepository
+    private val homeRepository: HomeRepository,
+    private val recommendationRepository: RecommendationRepository
 ) : ViewModel() {
 
     private val _matchFoundUserId = MutableStateFlow<String?>(null)
@@ -44,7 +46,7 @@ class HomeViewModel @Inject constructor(
         fetchHome()
     }
 
-    private fun getCurrentUserId(): String? {
+    fun getCurrentUserId(): String? {
         return FirebaseAuth.getInstance().currentUser?.uid
     }
 
@@ -162,4 +164,34 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun updateEmbeddingWithFeedbackForSwipe(swipedUser: User, liked: Boolean) {
+        val likerId = getCurrentUserId() ?: return
+        viewModelScope.launch {
+            try {
+                val userEmbedding = recommendationRepository.getEmbeddingFromFirestore(likerId)
+                val otherEmbedding = recommendationRepository.getEmbeddingFromFirestore(swipedUser.uid)
+                if (userEmbedding == null || otherEmbedding == null) {
+                    android.util.Log.w(
+                        "HomeViewModel",
+                        "Embeddings not found for $likerId or ${swipedUser.uid}, skipping update"
+                    )
+                    return@launch
+                }
+                recommendationRepository.updateEmbeddingWithFeedback(
+                    likerId,
+                    userEmbedding,
+                    otherEmbedding,
+                    liked
+                )
+                android.util.Log.d(
+                    "HomeViewModel",
+                    "updateEmbeddingWithFeedback called for ${likerId} and ${swipedUser.uid}, liked=$liked"
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error updating embedding with feedback", e)
+            }
+        }
+    }
+
 }

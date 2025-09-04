@@ -4,6 +4,9 @@ import android.content.Context
 import com.example.dating.data.model.User
 import com.example.dating.data.model.utils.DateUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.tasks.await
 import org.json.JSONObject
 import javax.inject.Inject
 import kotlin.math.sqrt
@@ -40,9 +43,35 @@ class RecommendationRepository @Inject constructor(
         return FloatArray(dim) { i -> ((hash + i) % 100) / 100f }
     }
 
+    suspend fun getEmbeddingFromFirestore(userId: String): FloatArray? {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val embeddingDoc = db.collection("user_embeddings").document(userId).get().await()
+        if (embeddingDoc.exists()) {
+            val embeddingMap = embeddingDoc.data ?: emptyMap<String, Any>()
+            return FloatArray(embeddingMap.size) { i ->
+                (embeddingMap["dim_$i"] as? Number)?.toFloat() ?: 0f
+            }
+        }
+        return null
+    }
+
+    private fun saveEmbeddingToFirestore(userId: String, userEmbedding: FloatArray) {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val embeddingMap = userEmbedding.mapIndexed { i, v -> "dim_$i" to v }.toMap()
+        db.collection("user_embeddings").document(userId)
+            .set(embeddingMap)
+            .addOnSuccessListener {
+                android.util.Log.d("RecommendationRepository", "Saved embedding for $userId")
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("RecommendationRepository", "Failed to save embedding for $userId", e)
+            }
+    }
 
     // --- Create user embedding ---
-    fun createEmbedding(user: User): FloatArray {
+    suspend fun createEmbedding(user: User): FloatArray {
+        getEmbeddingFromFirestore(user.uid)?.let { return it }
+
         // --- Age ---
         val age = DateUtils.calculateAgeFromBirthday(user.birthday) ?: 0
         val ageFeature = ((age - 18) / 42f).coerceIn(0f, 1f)
@@ -73,10 +102,12 @@ class RecommendationRepository @Inject constructor(
         }
 
         // --- Concat all features ---
-        return floatArrayOf(ageFeature, lastActiveFeature) +
+        val embedding = floatArrayOf(ageFeature, lastActiveFeature) +
                 interestFeature +
                 jobFeature +
                 descriptionFeature
+        saveEmbeddingToFirestore(user.uid, embedding)
+        return embedding
     }
 
     // --- Similarity ---
@@ -94,16 +125,18 @@ class RecommendationRepository @Inject constructor(
     }
 
     // --- Compute scores ---
-    fun computeScores(
+    suspend fun computeScores(
         currentEmbedding: FloatArray,
         users: List<User>,
         useCosine: Boolean = false
-    ): List<Pair<User, Float>> {
-        return users.map { user ->
-            val embedding = createEmbedding(user)
-            val score = if (useCosine) cosineSimilarity(currentEmbedding, embedding) else dotProduct(currentEmbedding, embedding)
-            user to score
-        }
+    ): List<Pair<User, Float>> = coroutineScope {
+        users.map { user ->
+            async {
+                val embedding = createEmbedding(user)
+                val score = if (useCosine) cosineSimilarity(currentEmbedding, embedding) else dotProduct(currentEmbedding, embedding)
+                user to score
+            }
+        }.map { it.await() }
     }
 
     fun sortUsersByScore(scoredUsers: List<Pair<User, Float>>): List<User> {
@@ -114,18 +147,35 @@ class RecommendationRepository @Inject constructor(
     suspend fun getRecommendedUsers(currentUser: User, users: List<User>): List<User> {
         val currentEmbedding = createEmbedding(currentUser)
         val scoredUsers = computeScores(currentEmbedding, users)
-        android.util.Log.d("RecommendationRepository", "scoredUsers size: ${scoredUsers.size}")
-        scoredUsers.forEach { (user, score) ->
-            android.util.Log.d("RecommendationRepository", "User: ${user.uid}, Name:${user.firstName} ${user.lastName}, Score: $score")
+
+        // chỉ lấy score dương
+        val filtered = scoredUsers.filter { it.second > 0f }
+            .sortedByDescending { it.second }
+
+        val batchSize = (filtered.size / 3).coerceAtLeast(1) // tránh chia 0
+        val batches = filtered.chunked(batchSize)
+
+        val shuffledBatches = batches.mapIndexed { index, batch ->
+            val shuffled = batch.shuffled()
+            android.util.Log.d("RecommendationRepository", "Batch $index size: ${shuffled.size}")
+            shuffled.forEach { (user, score) ->
+                android.util.Log.d("RecommendationRepository", "Batch $index -> User: ${user.uid}, ${user.firstName} ${user.lastName}, Score: $score")
+            }
+            shuffled
         }
-        return sortUsersByScore(scoredUsers)
+
+        // gộp lại thành danh sách cuối cùng
+        return shuffledBatches.flatten().map { it.first }
     }
 
+
+
     // --- Update embedding online khi swipe ---
-    fun updateEmbeddingWithFeedback(userEmbedding: FloatArray, otherEmbedding: FloatArray, liked: Boolean, learningRate: Float = 0.01f) {
+    fun updateEmbeddingWithFeedback(currentUserId: String, userEmbedding: FloatArray, otherEmbedding: FloatArray, liked: Boolean, learningRate: Float = 0.05f) {
         val sign = if (liked) 1f else -1f
         for(i in userEmbedding.indices) {
             userEmbedding[i] += learningRate * sign * otherEmbedding[i]
         }
+        saveEmbeddingToFirestore(currentUserId, userEmbedding)
     }
 }

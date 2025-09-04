@@ -88,20 +88,15 @@ fun HomeScreen(
     fun handleProfileAction(isLike: Boolean, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
         val currentProfile = profiles.getOrNull(profileIndex)
         if (currentProfile != null) {
+            homeViewModel.updateEmbeddingWithFeedbackForSwipe(currentProfile, isLike)
             if (isLike) {
                 val likedUserId = currentProfile.uid
-                if (likedUserId != null) {
-                    homeViewModel.likeProfile(likedUserId)
-                    // Check for match and navigate if found
-                    val matchId = homeViewModel.matchFoundUserId.value
-                    if (matchId != null) {
-                        navController.navigate("match")
-                    }
-                }
+                homeViewModel.likeProfile(likedUserId)
             }
             homeViewModel.nextProfile()
         }
     }
+
     suspend fun animateSwipe(offsetX: Animatable<Float, *>, direction: Float) {
         offsetX.animateTo(direction * 400f, tween(300))
         offsetX.snapTo(0f)

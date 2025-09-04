@@ -137,6 +137,7 @@ private fun UserProfileContent(
         if (isLike) {
             currentProfile?.uid?.let { uid ->
                 homeViewModel.likeProfile(uid)
+                homeViewModel.updateEmbeddingWithFeedbackForSwipe(currentProfile, isLike)
             }
         }
         homeViewModel.nextProfile()
