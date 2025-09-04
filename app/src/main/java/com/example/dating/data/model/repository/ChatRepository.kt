@@ -28,6 +28,26 @@ class ChatRepository(
         return Triple(name, photoUrl, lastActive)
     }
 
+    suspend fun getPeerInfoWithUid(conversationId: String): PeerInfoResult {
+        val doc = db.collection("conversations").document(conversationId).get().await()
+        val currentUid = auth.currentUser?.uid
+        val participants = doc.get("participants") as? List<String> ?: return PeerInfoResult("", "", null, null)
+        val peerId = participants.find { it != currentUid } ?: return PeerInfoResult("", "", null, null)
+        val userDoc = db.collection("users").document(peerId).get().await()
+        val firstName = userDoc.getString("firstName") ?: ""
+        val lastName = userDoc.getString("lastName") ?: ""
+        val name = "$firstName $lastName".trim()
+        val photoUrl = userDoc.getString("avatarUrl") ?: ""
+        val lastActive = userDoc.getLong("lastActive") // <-- may be null
+        return PeerInfoResult(name, photoUrl, lastActive, peerId)
+    }
+
+    data class PeerInfoResult(
+        val name: String,
+        val photoUrl: String,
+        val lastActive: Long?,
+        val peerUid: String?
+    )
 
     fun getMessagesRealtime(conversationId: String): Flow<List<ChatMessage>> = callbackFlow {
         val listener = db.collection("conversations")
