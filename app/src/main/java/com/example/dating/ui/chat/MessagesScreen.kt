@@ -283,10 +283,10 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
                 item.currentUid -> "You"
                 else -> "${item.peer.firstName} ${item.peer.lastName}"
             }
-            val messageText = item.lastMessage?.text?.takeIf { it.isNotBlank() } ?: "No messages yet"
+            val messageText = item.lastMessage?.text?.takeIf { it.isNotBlank() } ?: "Say hello and start the conversation!"
             Text(
                 text = if (item.lastMessage != null) "$senderName: $messageText" else messageText,
-                style = MaterialTheme.typography.bodyMedium,
+                style = if (item.lastMessage != null) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                 color = Color.Gray,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
