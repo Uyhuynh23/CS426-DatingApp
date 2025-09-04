@@ -68,10 +68,12 @@ class RecommendationRepository @Inject constructor(
             }
     }
 
+    fun mergeEmbeddings(base: FloatArray, feedback: FloatArray): FloatArray {
+        return FloatArray(base.size) { i -> 0.8f*base[i] + 0.2f*feedback[i] } // weighting tuỳ ý
+    }
+
     // --- Create user embedding ---
     suspend fun createEmbedding(user: User): FloatArray {
-        getEmbeddingFromFirestore(user.uid)?.let { return it }
-
         // --- Age ---
         val age = DateUtils.calculateAgeFromBirthday(user.birthday) ?: 0
         val ageFeature = ((age - 18) / 42f).coerceIn(0f, 1f)
@@ -102,10 +104,17 @@ class RecommendationRepository @Inject constructor(
         }
 
         // --- Concat all features ---
-        val embedding = floatArrayOf(ageFeature, lastActiveFeature) +
+        var embedding = floatArrayOf(ageFeature, lastActiveFeature) +
                 interestFeature +
                 jobFeature +
                 descriptionFeature
+
+        // Check if embedding already exists, merge if so
+        val existingEmbedding = getEmbeddingFromFirestore(user.uid)
+        if (existingEmbedding != null && existingEmbedding.size == embedding.size) {
+            embedding = mergeEmbeddings(existingEmbedding, embedding)
+        }
+
         saveEmbeddingToFirestore(user.uid, embedding)
         return embedding
     }
@@ -132,7 +141,7 @@ class RecommendationRepository @Inject constructor(
     ): List<Pair<User, Float>> = coroutineScope {
         users.map { user ->
             async {
-                val embedding = createEmbedding(user)
+                val embedding = getEmbeddingFromFirestore(user.uid) ?: createEmbedding(user)
                 val score = if (useCosine) cosineSimilarity(currentEmbedding, embedding) else dotProduct(currentEmbedding, embedding)
                 user to score
             }

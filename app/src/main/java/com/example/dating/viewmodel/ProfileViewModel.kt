@@ -2,25 +2,26 @@ package com.example.dating.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dating.data.model.Resource
+import com.example.dating.data.model.User
+import com.example.dating.data.model.UserFilterPreferences
+import com.example.dating.data.model.repository.AuthRepository
+import com.example.dating.data.model.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.example.dating.data.model.User
-import com.example.dating.data.model.repository.AuthRepository
-import com.example.dating.data.model.repository.UserRepository
-import com.example.dating.data.model.Resource
-import com.example.dating.data.model.UserFilterPreferences
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.storage.FirebaseStorage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val auth: AuthRepository,
+    private val recommendationRepository: com.example.dating.data.model.repository.RecommendationRepository // Injected instance
     ) : ViewModel() {
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user
@@ -51,6 +52,12 @@ class ProfileViewModel @Inject constructor(
             _updateState.value = result
             if (result is Resource.Success) {
                 _user.value = user
+                try {
+                    // Use injected RecommendationRepository instead of creating a new instance
+                    recommendationRepository.createEmbedding(user)
+                } catch (e: Exception) {
+                    android.util.Log.e("ProfileViewModel", "Failed to update embedding: ${e.message}")
+                }
             }
         }
     }
