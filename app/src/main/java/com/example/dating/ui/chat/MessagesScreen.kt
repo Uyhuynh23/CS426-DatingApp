@@ -245,7 +245,19 @@ fun StoryBubble(
 ) {
     val storiesStateFlow = remember { storyViewModel.observeUserStories(user.uid) }
     val stories by storiesStateFlow.collectAsState()
-    val hasStory = stories.any { it.expiresAt ?: 0 > System.currentTimeMillis() }
+    val now = System.currentTimeMillis()
+    val validStories = stories.filter { it.expiresAt ?: 0 > now }
+    val hasStory = validStories.isNotEmpty()
+    val myUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+
+    // True if all valid stories have been seen by current user
+    val allSeen = hasStory && validStories.all { it.seenBy.contains(myUid) }
+
+    val borderColor = when {
+        !hasStory -> Color.LightGray
+        allSeen -> Color.Gray // Seen color
+        else -> AppColors.Text_Pink // Unseen color
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -263,11 +275,7 @@ fun StoryBubble(
             modifier = Modifier
                 .size(60.dp)
                 .clip(CircleShape)
-                .border(
-                    3.dp,
-                    if (hasStory) AppColors.Text_Pink else Color.LightGray,
-                    CircleShape
-                )
+                .border(3.dp, borderColor, CircleShape)
         )
         Text(
             "${user.firstName} ${user.lastName}",
@@ -277,6 +285,7 @@ fun StoryBubble(
         )
     }
 }
+
 @Composable
 fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
     android.util.Log.d("MessageItem", item.toString())
