@@ -10,7 +10,9 @@ import javax.inject.Singleton
 
 @Singleton
 class HomeRepository @Inject constructor(
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val filteringRepository: FilteringRepository, // Remove RecommendationRepository injection
+    private val recommendationRepository: RecommendationRepository // Remove RecommendationRepository injection
 ) {
     suspend fun fetchProfiles(): List<String> {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
@@ -26,97 +28,22 @@ class HomeRepository @Inject constructor(
             )
         }
         val snapshot = db.collection("users").get().await()
-        val currentUserLocation = currentUserDoc.getString("location")
-        val currentUserBirthday = currentUserDoc.getString("birthday")
-        // TODO: parse location if you use lat/lng
-        val uids = snapshot.documents.mapNotNull { doc ->
-            val uid = doc.id
-            if (uid == currentUserId) return@mapNotNull null
-            val gender = doc.getString("gender")
-            val birthday = doc.getString("birthday")
-            val location = doc.getString("location")
-            val distance = (doc.get("distance") as? Long)?.toInt()
-            // Get lat/lng directly
-            val lat = (doc.get("lat") as? Double)
-                ?: (doc.get("lat") as? Float)?.toDouble()
-                ?: (doc.get("lat") as? Long)?.toDouble()
-            val lng = (doc.get("lng") as? Double)
-                ?: (doc.get("lng") as? Float)?.toDouble()
-                ?: (doc.get("lng") as? Long)?.toDouble()
-            val currentUserLat = (currentUserDoc.get("lat") as? Double)
-                ?: (currentUserDoc.get("lat") as? Float)?.toDouble()
-                ?: (currentUserDoc.get("lat") as? Long)?.toDouble()
-            val currentUserLng = (currentUserDoc.get("lng") as? Double)
-                ?: (currentUserDoc.get("lng") as? Float)?.toDouble()
-                ?: (currentUserDoc.get("lng") as? Long)?.toDouble()
-            android.util.Log.d("HomeRepository", "lat=$lat, lng=$lng, currentUserLat=$currentUserLat, currentUserLng=$currentUserLng")
-
-            var filterPassed = true
-            val infoLog = StringBuilder("UID=$uid, gender=$gender, birthday=$birthday, location=$location, distance=$distance")
-            // Filter by gender
-            if (filterPrefs?.preferredGender != null && filterPrefs.preferredGender != "Both" && gender != filterPrefs.preferredGender) {
-                infoLog.append(" | Gender filter failed")
-                filterPassed = false
-            }
-            // Filter by age
-            if (filterPrefs?.minAge != null && filterPrefs?.maxAge != null && birthday != null) {
-                var age: Int? = null
-                var parseError: String? = null
-                try {
-                     // Try user-provided logic first
-                    age = try {
-                        val year = birthday.split("/").getOrNull(2)?.toInt()
-                        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-                        if (year != null) currentYear - year else null
-                    } catch (e: Exception) { null }
-                    // If failed, try other formats
-                    if (age == null) {
-                        val formats = listOf("yyyy-MM-dd", "dd-MM-yyyy", "MM/dd/yyyy")
-                        for (fmt in formats) {
-                            try {
-                                val sdf = java.text.SimpleDateFormat(fmt)
-                                val date = sdf.parse(birthday)
-                                if (date != null) {
-                                    val dobCal = java.util.Calendar.getInstance()
-                                    dobCal.time = date
-                                    val birthYear = dobCal.get(java.util.Calendar.YEAR)
-                                    val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-                                    age = currentYear - birthYear
-                                    break
-                                }
-                            } catch (e: Exception) { parseError = e.message }
-                        }
-                    }
-                } catch (e: Exception) {
-                    parseError = e.message
-                }
-                if (age == null || age < filterPrefs.minAge || age > filterPrefs.maxAge) {
-                    infoLog.append(" | Age filter failed (age=$age, birthday=$birthday, error=$parseError)")
-                    filterPassed = false
-                } else {
-                    infoLog.append(" | Age=$age")
-                }
-            }
-            // Filter by distance
-            if (filterPrefs?.maxDistance != null && distance != null && distance > filterPrefs.maxDistance) {
-                infoLog.append(" | Distance filter failed")
-                filterPassed = false
-            }
-            // Filter by distance using lat/lng
-            if (filterPrefs?.maxDistance != null && lat != null && lng != null && currentUserLat != null && currentUserLng != null) {
-                val distanceKm = haversine(currentUserLat, currentUserLng, lat, lng)
-                if (distanceKm > filterPrefs.maxDistance) {
-                    infoLog.append(" | LatLng distance filter failed ($distanceKm km)")
-                    filterPassed = false
-                } else {
-                    infoLog.append(" | LatLng distance=$distanceKm km")
-                }
-            }
-            infoLog.append(" | Filter result: ${if (filterPassed) "PASS" else "FAIL"}")
-            android.util.Log.d("HomeRepository", infoLog.toString())
-            if (filterPassed) uid else null
+        val filteredDocs = snapshot.documents.filter { doc ->
+            filteringRepository.filterUser(doc, currentUserId, currentUserDoc, filterPrefs)
         }
-        android.util.Log.d("HomeRepository", "Filtered UIDs: $uids")
+        // Get current user object for recommendation
+        val currentUser = getUserProfilesByIds(listOf(currentUserId)).firstOrNull()
+        val users = getUserProfilesByIds(filteredDocs.map { it.id })
+        android.util.Log.d("HomeRepository", "Before recommendation: users=${users.size}, currentUser=$currentUser")
+        val sortedDocs = if (currentUser != null) {
+            val recommended = recommendationRepository.getRecommendedUsers(currentUser, users)
+            android.util.Log.d("HomeRepository", "After recommendation: recommended=${recommended.size}")
+            recommended
+        } else {
+            users
+        }
+        val uids = sortedDocs.map { it.uid }
+        android.util.Log.d("HomeRepository", "Filtered & Sorted UIDs: $uids")
         return uids
     }
 
@@ -124,7 +51,8 @@ class HomeRepository @Inject constructor(
         if (userIds.isEmpty()) return emptyList()
         val batchSize = 30
         val batches = userIds.chunked(batchSize)
-        val allUsers = mutableListOf<User>()
+        val userMap = mutableMapOf<String, User>()
+
         for (batch in batches) {
             val snapshot = db.collection("users")
                 .whereIn(FieldPath.documentId(), batch)
@@ -146,16 +74,21 @@ class HomeRepository @Inject constructor(
                     distance = (data["distance"] as? Long)?.toInt()
                 )
             }
-            allUsers.addAll(users)
+            // Lưu vào map theo uid
+            users.forEach { userMap[it.uid] = it }
         }
-        return allUsers
+
+        // Reorder theo thứ tự của userIds đầu vào
+        return userIds.mapNotNull { userMap[it] }
     }
+
 
     suspend fun saveUserLocation(uid: String, location: Map<String, Any>) {
         db.collection("users").document(uid)
             .set(location, com.google.firebase.firestore.SetOptions.merge())
             .await()
     }
+
 
     // Add Haversine formula function
     private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
