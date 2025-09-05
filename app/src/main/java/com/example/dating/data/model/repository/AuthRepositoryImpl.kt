@@ -14,9 +14,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthRepositoryImpl @Inject constructor(
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val db: FirebaseFirestore
 ) : AuthRepository {
 
 
@@ -29,8 +31,7 @@ class AuthRepositoryImpl @Inject constructor(
             // Set user online status after login
             result.user?.let { user ->
                 val uid = user.uid
-                com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    .collection("users").document(uid)
+                    db.collection("users").document(uid)
                     .update(
                         mapOf(
                             "isOnline" to true,
@@ -82,8 +83,7 @@ class AuthRepositoryImpl @Inject constructor(
         // Set user offline status before logout
         val uid = firebaseAuth.currentUser?.uid
         if (uid != null) {
-            com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                .collection("users").document(uid)
+            db.collection("users").document(uid)
                 .update(
                     mapOf(
                         "isOnline" to false,

@@ -241,3 +241,5 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
         }
     }
 }
+
+// No direct changes needed here, but ensure that any data loading in screens is done in ViewModels, not in composables.
