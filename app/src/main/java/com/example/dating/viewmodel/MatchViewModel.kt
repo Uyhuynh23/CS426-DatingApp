@@ -2,16 +2,16 @@ package com.example.dating.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dating.data.model.User
+import com.example.dating.data.model.repository.FirebaseMessagesRepository
 import com.example.dating.data.model.repository.MatchRepository
+import com.example.dating.data.model.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import com.example.dating.data.model.User
-import com.example.dating.data.model.repository.UserRepository
 import kotlinx.coroutines.flow.first
-import com.example.dating.data.model.repository.FirebaseMessagesRepository
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 class MatchViewModel @Inject constructor(

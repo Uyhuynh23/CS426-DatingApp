@@ -289,6 +289,7 @@ fun StoryBubble(
 @Composable
 fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
     android.util.Log.d("MessageItem", item.toString())
+    val unreadCount = item.unreadCount ?: 0
     Row(
         Modifier
             .fillMaxWidth()
@@ -310,29 +311,45 @@ fun MessageItem(item: ConversationPreview, onClick: () -> Unit = {}) {
             Text(
                 text = "${item.peer.firstName} ${item.peer.lastName}",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = if (unreadCount > 0) FontWeight.Bold else FontWeight.Normal
             )
             val senderName = when (item.lastMessage?.fromUid) {
                 null -> ""
                 item.currentUid -> "You"
                 else -> "${item.peer.firstName} ${item.peer.lastName}"
             }
-            val messageText = item.lastMessage?.text?.takeIf { it.isNotBlank() } ?: "No messages yet"
+            val messageText = item.lastMessage?.text?.takeIf { it.isNotBlank() } ?: "Say hello and start the conversation!"
             Text(
                 text = if (item.lastMessage != null) "$senderName: $messageText" else messageText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (unreadCount > 0) FontWeight.Bold else FontWeight.Normal),
+                color = if (unreadCount > 0) AppColors.Text_Pink else Color.Gray,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        if (item.timeAgo.isNotEmpty()) {
-            Text(
-                text = item.timeAgo,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
+        Column(horizontalAlignment = Alignment.End) {
+            if (item.timeAgo.isNotEmpty()) {
+                Text(
+                    text = item.timeAgo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+            if (unreadCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .background(AppColors.Text_Pink, shape = CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = unreadCount.toString(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
         }
     }
 }

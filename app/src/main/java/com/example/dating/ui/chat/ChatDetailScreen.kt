@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -82,6 +83,14 @@ fun ChatDetailScreen(
     LaunchedEffect(conversationId) {
         viewModel.loadMessages(conversationId)
         viewModel.loadPeer(conversationId)
+        //set user as active
+        viewModel.setActive(conversationId, true)
+    }
+    DisposableEffect(conversationId) {
+        onDispose {
+            // Set user as inactive when leaving the screen
+            viewModel.setActive(conversationId, false)
+        }
     }
 
     // Online detection: consider online if lastActive within 2 minutes
@@ -93,7 +102,7 @@ fun ChatDetailScreen(
     val totalMessages = remember(groupedMessages) { groupedMessages.sumOf { it.messages.size } }
     LaunchedEffect(totalMessages) {
         if (totalMessages > 0) {
-            listState.animateScrollToItem(totalMessages - 1)
+            listState.scrollToItem(totalMessages - 1)
         }
     }
 
@@ -385,3 +394,4 @@ private fun RoundIconButton(
         }
     }
 }
+
