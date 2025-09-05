@@ -45,15 +45,5 @@ fun ProfileHero(profile: User?, navController: NavController) {
                 modifier = Modifier.fillMaxSize()
             )
         }
-        IconButton(
-            onClick = { navController.navigateUp() }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_back_pink),
-                contentDescription = "Location",
-                modifier = Modifier.size(64.dp),
-                tint = Color.Unspecified
-            )
-        }
     }
 }

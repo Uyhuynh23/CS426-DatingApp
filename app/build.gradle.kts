@@ -58,6 +58,7 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.database)
+    implementation(libs.androidx.foundation)
     kapt("com.google.dagger:hilt-compiler:2.51.1")
 
     // Hilt ViewModel cho Compose
