@@ -1,5 +1,6 @@
 package com.example.dating.ui.chat
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,17 +65,32 @@ import com.example.dating.viewmodel.StoryViewModel
 fun MessagesScreen(
     navController: NavController,
     viewModel: MessagesViewModel = hiltViewModel(),
-    storyViewModel: StoryViewModel = hiltViewModel() // <-- Add StoryViewModel
+    storyViewModel: StoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
     val sheetState = rememberModalBottomSheetState()
     var showFilterSheet by remember { mutableStateOf(false) }
 
-
+    Log.d("ActivitiesDebug_uistate", uiState.toString())
+    // --- NEW: Collect stories for all peers ---
+    val peers = uiState.messages.map { it.peer }
+//    val peerStoriesMap = remember(peers) {
+//        peers.associate { peer ->
+//            peer.uid to storyViewModel.observeUserStories(peer.uid)
+//        }
+//    }
+//    val now = System.currentTimeMillis()
+//    val peersWithStory = peers.filter { peer ->
+//        val stories = peerStoriesMap[peer.uid]?.value ?: emptyList()
+//        Log.d("ActivitiesDebug", "Peer: ${peer.uid}, stories: ${stories.map { it.id to it.expiresAt }}")
+//        val hasValidStory = stories.any { it.expiresAt ?: 0 > now }
+//        Log.d("ActivitiesDebug", "Peer: ${peer.uid}, hasValidStory: $hasValidStory")
+//        hasValidStory
+//    }
+//    Log.d("ActivitiesDebug", "Peers with story: ${peersWithStory.map { it.uid }}")
 
     Scaffold(bottomBar = { BottomNavigationBar(navController, 2) }) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -93,7 +109,7 @@ fun MessagesScreen(
                 }
 
                 else -> {
-                    // Activities
+                    // Activities: Only show users with valid story
                     Text(
                         "Activities",
                         modifier = Modifier.padding(start = 20.dp, top = 8.dp, end = 20.dp),
@@ -103,12 +119,18 @@ fun MessagesScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
-                        items(uiState.messages) { conversation ->
-                            StoryBubble(
-                                user = conversation.peer,
-                                navController = navController,
-                                storyViewModel = storyViewModel
-                            )
+                        // Inside your LazyRow composable
+                        items(peers) { peer ->
+                            val storiesState = storyViewModel.observeUserStories(peer.uid)
+                            val stories by storiesState.collectAsState()
+                            val hasValidStory = stories.any { it.expiresAt ?: 0 > System.currentTimeMillis() }
+                            if (hasValidStory) {
+                                StoryBubble(
+                                    user = peer,
+                                    navController = navController,
+                                    storyViewModel = storyViewModel
+                                )
+                            }
                         }
                     }
 
@@ -223,7 +245,19 @@ fun StoryBubble(
 ) {
     val storiesStateFlow = remember { storyViewModel.observeUserStories(user.uid) }
     val stories by storiesStateFlow.collectAsState()
-    val hasStory = stories.any { it.expiresAt ?: 0 > System.currentTimeMillis() }
+    val now = System.currentTimeMillis()
+    val validStories = stories.filter { it.expiresAt ?: 0 > now }
+    val hasStory = validStories.isNotEmpty()
+    val myUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+
+    // True if all valid stories have been seen by current user
+    val allSeen = hasStory && validStories.all { it.seenBy.contains(myUid) }
+
+    val borderColor = when {
+        !hasStory -> Color.LightGray
+        allSeen -> Color.Gray // Seen color
+        else -> AppColors.Text_Pink // Unseen color
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -231,7 +265,6 @@ fun StoryBubble(
             .padding(8.dp)
             .clickable(enabled = hasStory) {
                 if (hasStory) {
-                    // Use navController.navigate with a defined Screen route for story viewing
                     navController.navigate("story_viewer/${user.uid}")
                 }
             }
@@ -242,13 +275,14 @@ fun StoryBubble(
             modifier = Modifier
                 .size(60.dp)
                 .clip(CircleShape)
-                .border(
-                    3.dp,
-                    if (hasStory) AppColors.Text_Pink else Color.LightGray,
-                    CircleShape
-                )
+                .border(3.dp, borderColor, CircleShape)
         )
-        Text(user.firstName, fontSize = 12.sp)
+        Text(
+            "${user.firstName} ${user.lastName}",
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
