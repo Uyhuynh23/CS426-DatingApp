@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -77,10 +78,19 @@ fun ChatDetailScreen(
     val peerAvatar by viewModel.peerAvatar.collectAsState(initial = null)
     val groupedMessages by viewModel.groupedMessages.collectAsState()
     val lastActive by viewModel.lastActive.collectAsState()
+    val peerUid by viewModel.peerUid.collectAsState() // <-- Add this line
 
     LaunchedEffect(conversationId) {
         viewModel.loadMessages(conversationId)
         viewModel.loadPeer(conversationId)
+        //set user as active
+        viewModel.setActive(conversationId, true)
+    }
+    DisposableEffect(conversationId) {
+        onDispose {
+            // Set user as inactive when leaving the screen
+            viewModel.setActive(conversationId, false)
+        }
     }
 
     // Online detection: consider online if lastActive within 2 minutes
@@ -92,7 +102,7 @@ fun ChatDetailScreen(
     val totalMessages = remember(groupedMessages) { groupedMessages.sumOf { it.messages.size } }
     LaunchedEffect(totalMessages) {
         if (totalMessages > 0) {
-            listState.animateScrollToItem(totalMessages - 1)
+            listState.scrollToItem(totalMessages - 1)
         }
     }
 
@@ -111,7 +121,8 @@ fun ChatDetailScreen(
             navController = navController,
             lastActive = lastActive,
             onBack = { navController.popBackStack() },
-            onMore = { /*TODO*/ }
+            onMore = { /*TODO*/ },
+            peerUid = peerUid // <-- Pass peerUid here
         )
 
         Spacer(Modifier.height(16.dp))
@@ -162,7 +173,8 @@ private fun ChatHeaderWhite(
     navController: NavController,
     lastActive: Long? = null,
     onBack: () -> Unit,
-    onMore: () -> Unit
+    onMore: () -> Unit,
+    peerUid: String? = null // <-- Add this parameter
 ) {
     Column(
         Modifier
@@ -198,7 +210,11 @@ private fun ChatHeaderWhite(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .clickable {  }
+                    .clickable {
+                        peerUid?.let {
+                            navController.navigate("user_profile2/$it")
+                        }
+                    }
             )
             Spacer(Modifier.width(12.dp))
             Column {
@@ -378,3 +394,4 @@ private fun RoundIconButton(
         }
     }
 }
+

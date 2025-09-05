@@ -2,17 +2,50 @@ package com.example.dating.ui.profile
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -23,49 +56,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.dating.R
+import com.example.dating.data.model.ALL_INTERESTS
+import com.example.dating.data.model.Resource
+import com.example.dating.data.model.User
+import com.example.dating.ui.components.BirthdayGenderFields
 import com.example.dating.ui.components.CustomCalendarDialog
+import com.example.dating.ui.components.DescriptionField
 import com.example.dating.ui.components.InterestsSection
 import com.example.dating.ui.components.JobDropdown
 import com.example.dating.ui.components.LocationField
 import com.example.dating.ui.components.NameFields
-import com.example.dating.ui.components.DescriptionField
-import com.example.dating.ui.components.BirthdayGenderFields
 import com.example.dating.ui.theme.AppColors
+import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.viewmodel.StoryViewModel
-import com.example.dating.viewmodel.AuthViewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import com.example.dating.data.model.User
-import com.example.dating.data.model.Resource
-import com.example.dating.data.model.Interest
-import com.example.dating.data.model.ALL_INTERESTS
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.ui.focus.onFocusChanged
-import android.net.Uri
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,7 +137,7 @@ fun ProfileContent(
     initialProfile: User,
     profileViewModel: ProfileViewModel,
     storyViewModel: StoryViewModel,
-    authViewModel: AuthViewModel // <-- Add AuthViewModel
+    authViewModel: AuthViewModel
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
@@ -166,6 +170,10 @@ fun ProfileContent(
     var saveError by remember { mutableStateOf<String?>(null) }
 
     val allInterests = remember { ALL_INTERESTS }
+
+    // Observe user's own stories
+    val myStories by storyViewModel.myStories.collectAsState()
+    val validStories = myStories.filter { it.expiresAt ?: 0 > System.currentTimeMillis() }
 
     LazyColumn(
         modifier = Modifier
@@ -275,6 +283,50 @@ fun ProfileContent(
             }
         }
 
+        // Show user's own story bubble if any
+        item {
+            if (validStories.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 4.dp)
+                        .clickable {
+                            navController.navigate("story_viewer/${initialProfile.uid}")
+                        },
+                    colors = CardDefaults.cardColors(containerColor = AppColors.Main_Secondary1)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        // Show avatar with pink border
+                        Image(
+                            painter = rememberAsyncImagePainter(initialProfile.avatarUrl ?: initialProfile.imageUrl.firstOrNull()),
+                            contentDescription = "Your Story",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .border(3.dp, AppColors.Text_Pink, CircleShape)
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = "Your Story",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = AppColors.Text_Pink
+                            )
+                            Text(
+                                text = "Tap to view",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Card: Edit button, user info, interests
         item {
             Card(
@@ -314,7 +366,8 @@ fun ProfileContent(
                                     job = editableJob,
                                     location = editableLocation,
                                     description = editableDescription,
-                                    interests = selectedInterests.toList()
+                                    interests = selectedInterests.toList(),
+                                    filterPreferences = initialProfile.filterPreferences
                                 )
                                 profileViewModel.updateProfile(user)
                                 isSaving = false

@@ -24,7 +24,7 @@ import com.example.dating.navigation.Screen
 import com.example.dating.ui.components.ProfileHero
 import com.example.dating.ui.components.ProfileInfoCard
 import com.example.dating.ui.theme.AppColors
-import com.example.dating.viewmodel.FavoriteViewModel
+import com.example.dating.viewmodel.UserViewModel
 
 data class Interest(
     val name: String,
@@ -38,17 +38,22 @@ data class Interest(
 fun UserProfileScreen2(
     navController: NavController,
     userUid: String? = null,
-    favoriteViewModel: FavoriteViewModel = hiltViewModel()
+    userViewModel: UserViewModel = hiltViewModel()
 ) {
-    val usersResource by favoriteViewModel.usersState.collectAsState()
-    val profiles = usersResource.let { res ->
-        when (res) {
-            is Resource.Success -> res.result
-            else -> emptyList()
-        }
+    // Observe user profile using UserViewModel
+    androidx.compose.runtime.LaunchedEffect(userUid) {
+        userViewModel.observeUser(userUid)
     }
-    val user = profiles.find { it.uid == userUid }
+    val user by userViewModel.user.collectAsState()
+    val isLoading by userViewModel.isLoading.collectAsState()
     val images = user?.imageUrl ?: emptyList()
+
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Loading...", color = Color.Gray)
+        }
+        return
+    }
 
     if (user == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -63,22 +68,22 @@ fun UserProfileScreen2(
     ) {
         item {
             ProfileHero(
-                profile = user,
+                profile = user!!,
                 navController = navController
             )
         }
-        item{ Spacer(modifier = Modifier.padding(32.dp) ) }
+        item { Spacer(modifier = Modifier.padding(32.dp)) }
         item {
             ProfileInfoCard(
-                user = user,
+                user = user!!,
                 images = images,
                 onSeeAll = { imgs ->
                     navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(imgs))
-                    navController.navigate(Screen.PhotoViewer.route(0))
+                    navController.navigate(com.example.dating.navigation.Screen.PhotoViewer.route(0))
                 },
                 onImageClick = { index, imgs ->
                     navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(imgs))
-                    navController.navigate(Screen.PhotoViewer.route(index))
+                    navController.navigate(com.example.dating.navigation.Screen.PhotoViewer.route(index))
                 }
             )
         }

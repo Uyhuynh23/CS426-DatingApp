@@ -196,15 +196,10 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 route = "user_profile2/{uid}",
                 arguments = listOf(navArgument("uid") { type = NavType.StringType })
             ) { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry(Screen.Home.route)
-                }
-                val favoriteViewModel: FavoriteViewModel = hiltViewModel(parentEntry)
                 val uid = backStackEntry.arguments?.getString("uid")
-                UserProfileScreen2(
+                com.example.dating.ui.profile.UserProfileScreen2(
                     navController = navController,
-                    userUid = uid,
-                    favoriteViewModel = favoriteViewModel
+                    userUid = uid
                 )
             }
 

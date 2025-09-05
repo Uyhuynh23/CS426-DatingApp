@@ -1,31 +1,54 @@
 package com.example.dating.ui.mainscreens
 
 import android.util.Log
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -34,33 +57,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import kotlinx.coroutines.launch
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.material3.CircularProgressIndicator
-import com.example.dating.ui.theme.AppColors
-import androidx.compose.ui.graphics.vector.ImageVector
-import java.util.Calendar
-import androidx.compose.runtime.MutableState
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.util.lerp
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.material3.Scaffold
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.dating.viewmodel.HomeViewModel
-import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.User
-import com.example.dating.ui.components.BottomNavigationBar
-import androidx.compose.foundation.gestures.detectTapGestures
 import com.example.dating.navigation.Screen
-import coil.compose.rememberAsyncImagePainter
+import com.example.dating.ui.components.BottomNavigationBar
+import com.example.dating.ui.theme.AppColors
+import com.example.dating.viewmodel.HomeViewModel
 import com.example.dating.viewmodel.ProfileViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import kotlinx.coroutines.launch
+import java.util.Calendar
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -71,32 +84,23 @@ fun HomeScreen(
     Log.d("HomeScreen", "usersResource: $usersResource")
     Log.d("HomeScreen", "profileIndex: $profileIndex")
 
-
-
     // Helper functions
     fun handleProfileAction(isLike: Boolean, profiles: List<User>, homeViewModel: HomeViewModel, navController: NavController) {
         val currentProfile = profiles.getOrNull(profileIndex)
         if (currentProfile != null) {
+            homeViewModel.updateEmbeddingWithFeedbackForSwipe(currentProfile, isLike)
             if (isLike) {
                 val likedUserId = currentProfile.uid
-                if (likedUserId != null) {
-                    homeViewModel.likeProfile(likedUserId)
-                    // Check for match and navigate if found
-                    val matchId = homeViewModel.matchFoundUserId.value
-                    if (matchId != null) {
-                        navController.navigate("match")
-                    }
-                }
+                homeViewModel.likeProfile(likedUserId)
             }
             homeViewModel.nextProfile()
         }
     }
+
     suspend fun animateSwipe(offsetX: Animatable<Float, *>, direction: Float) {
         offsetX.animateTo(direction * 400f, tween(300))
         offsetX.snapTo(0f)
     }
-
-
 
     // Observe matchFoundUserId and navigate if a match is found
     val matchFoundUserId by homeViewModel.matchFoundUserId.collectAsState()
@@ -111,6 +115,60 @@ fun HomeScreen(
             homeViewModel.resetMatchFoundUserId()
         }
     }
+
+    // Location permission request
+    /*val locationPermissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+    val showLocationDialog = remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (!locationPermissionsState.allPermissionsGranted) {
+            showLocationDialog.value = true
+        }
+    }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val locationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    val firestore = remember { FirebaseFirestore.getInstance() }
+    val auth = remember { FirebaseAuth.getInstance() }
+    val locationSaved = remember { mutableStateOf(false) }
+
+    if (showLocationDialog.value && !locationPermissionsState.allPermissionsGranted) {
+        AlertDialog(
+            onDismissRequest = { showLocationDialog.value = false },
+            title = { Text("Location Permission Required") },
+            text = {
+                Text("We need your location to show matches nearby. " +
+                        "Your exact movements will not be tracked.")
+            },
+            confirmButton = {
+                Button(onClick = {
+                    locationPermissionsState.launchMultiplePermissionRequest()
+                    showLocationDialog.value = false
+                }) {
+                    Text("Allow")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationDialog.value = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+        homeViewModel.saveUserLocationIfPermitted(
+            context,
+            locationClient,
+            locationPermissionsState,
+            locationSaved
+        )
+    }*/
 
     // Use Box to overlay BottomNavigationBar and keep it fixed at the bottom
     Scaffold(
