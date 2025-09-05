@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -71,6 +72,13 @@ class ChatViewModel @Inject constructor(
     fun sendMessage(conversationId: String, text: String) {
         viewModelScope.launch {
             chatRepository.sendMessage(conversationId, text)
+        }
+    }
+
+    fun setActive(conversationId: String, isActive: Boolean) {
+        viewModelScope.launch {
+            chatRepository.setActive(conversationId, isActive)
+            if (isActive) chatRepository.resetUnreadCount(conversationId)
         }
     }
 

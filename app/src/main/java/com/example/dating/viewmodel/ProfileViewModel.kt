@@ -10,8 +10,6 @@ import com.example.dating.data.model.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -131,7 +129,7 @@ class ProfileViewModel @Inject constructor(
 
     fun updateFilterPreferences(uid: String, prefs: UserFilterPreferences, onResult: (Resource<Unit>) -> Unit) {
         android.util.Log.d("UserViewModel", "updateFilterPreferences called: uid=$uid, prefs=$prefs")
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch {
             val result = userRepository.updateFilterPreferences(uid, prefs)
             android.util.Log.d("UserViewModel", "updateFilterPreferences result: $result for uid=$uid")
             onResult(result)
