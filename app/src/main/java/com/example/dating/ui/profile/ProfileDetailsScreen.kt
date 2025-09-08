@@ -1,5 +1,6 @@
 package com.example.dating.ui.profile
 
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -36,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,10 +69,12 @@ import com.example.dating.ui.components.InterestsSection
 import com.example.dating.ui.components.JobDropdown
 import com.example.dating.ui.components.LocationField
 import com.example.dating.ui.components.NameFields
+import com.example.dating.ui.components.CountryData
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.viewmodel.StoryViewModel
+import org.json.JSONArray
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +179,13 @@ fun ProfileContent(
     // Observe user's own stories
     val myStories by storyViewModel.myStories.collectAsState()
     val validStories = myStories.filter { it.expiresAt ?: 0 > System.currentTimeMillis() }
+
+    val context = LocalContext.current
+    var countries by remember { mutableStateOf<List<CountryData>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        countries = loadCountriesFromAssets(context)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -419,8 +431,10 @@ fun ProfileContent(
                         onJobChange = { editableJob = it })
                     Spacer(modifier = Modifier.height(8.dp))
                     LocationField(
-                        location = editableLocation, isEditMode = isEditMode,
-                        onLocationChange = { editableLocation = it }
+                        location = editableLocation,
+                        isEditMode = isEditMode,
+                        onLocationChange = { editableLocation = it },
+                        countries = countries
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DescriptionField(
@@ -467,5 +481,23 @@ fun ProfileContent(
             onDismiss = { showCalendar = false },
             date = initialDate // <-- Pass initial date here
         )
+    }
+}
+
+// Helper function to load countries from assets
+fun loadCountriesFromAssets(context: Context): List<CountryData> {
+    return try {
+        val inputStream = context.assets.open("countries.json")
+        val jsonString = inputStream.bufferedReader().use { it.readText() }
+        val jsonArray = JSONArray(jsonString)
+        List(jsonArray.length()) { i ->
+            val obj = jsonArray.getJSONObject(i)
+            val name = obj.getString("name")
+            val citiesJson = obj.getJSONArray("cities")
+            val cities = List(citiesJson.length()) { j -> citiesJson.getString(j) }
+            CountryData(name, cities)
+        }
+    } catch (e: Exception) {
+        emptyList()
     }
 }

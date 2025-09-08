@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,13 +24,10 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = auth.currentUser?.uid
             if (userId != null) {
-                firestore.collection("users").document(userId)
-                    .get()
-                    .addOnSuccessListener { document ->
-                        if (document.exists()) {
-                            _onboardingState.value = document.getBoolean("onboardingCompleted") ?: false
-                        }
-                    }
+                val doc = firestore.collection("users").document(userId).get().await()
+                if (doc.exists()) {
+                    _onboardingState.value = doc.getBoolean("onboardingCompleted") ?: false
+                }
             }
         }
     }
@@ -40,11 +38,9 @@ class OnboardingViewModel @Inject constructor(
             if (userId != null) {
                 firestore.collection("users").document(userId)
                     .update("onboardingCompleted", true)
-                    .addOnSuccessListener {
-                        _onboardingState.value = true
-                    }
+                    .await()
+                _onboardingState.value = true
             }
         }
     }
 }
-

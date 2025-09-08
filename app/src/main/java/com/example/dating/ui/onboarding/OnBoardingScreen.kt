@@ -1,7 +1,6 @@
 package com.example.dating.ui.onboarding
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -21,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.dating.R
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
@@ -104,8 +104,9 @@ fun OnboardingScreen(navController: NavController) {
                         this.alpha = alpha
                     }
             ) {
-                Image(
-                    painter = painterResource(id = pages[actualPage].image),
+                // Replace Image with AsyncImage for async loading
+                AsyncImage(
+                    model = pages[actualPage].image,
                     contentDescription = pages[actualPage].title,
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))

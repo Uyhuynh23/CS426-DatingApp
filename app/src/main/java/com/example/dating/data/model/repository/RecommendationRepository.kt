@@ -71,7 +71,7 @@ class RecommendationRepository @Inject constructor(
     fun mergeEmbeddings(base: FloatArray, feedback: FloatArray): FloatArray {
         return FloatArray(base.size) { i -> 0.8f*base[i] + 0.2f*feedback[i] } // weighting tuỳ ý
     }
-
+    
     // --- Create user embedding ---
     suspend fun createEmbedding(user: User): FloatArray {
         // --- Age ---

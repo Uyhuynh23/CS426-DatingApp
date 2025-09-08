@@ -1,5 +1,4 @@
-package com.example.dating.ui.profile
-
+package  com.example.dating.ui.profile
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -8,16 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -25,21 +15,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -57,9 +41,7 @@ import com.example.dating.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-
 @SuppressLint("UnrememberedGetBackStackEntry")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
     navController: NavController,
@@ -86,32 +68,51 @@ fun UserProfileScreen(
         }
     }
 
-    when {
-        isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    Box(Modifier.fillMaxSize()) {
+        // Fixed back arrow at top left
+        IconButton(
+            onClick = { navController.navigateUp() },
+            modifier = Modifier
+                .padding(16.dp)
+                .size(48.dp)
+                .align(Alignment.TopStart)
+                .zIndex(10f)
+
+        ) {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(com.example.dating.R.drawable.ic_back_pink),
+                contentDescription = "Back",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(40.dp)
+            )
         }
-        user != null -> UserProfileContent(
-            navController = navController,
-            profiles = profiles,
-            profileIndex = profileIndex,
-            homeViewModel = homeViewModel,
-            onSwipeDone = {
-            },
-            onSeeAll = { images ->
-                navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(images))
-                navController.navigate(Screen.PhotoViewer.route(0))
-            },
-            onImageClick = { index, images ->
-                navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(images))
-                navController.navigate(Screen.PhotoViewer.route(index))
+
+        when {
+            isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-        )
-        else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            navController.navigateUp()
+            user != null -> UserProfileContent(
+                navController = navController,
+                profiles = profiles,
+                profileIndex = profileIndex,
+                homeViewModel = homeViewModel,
+                onSwipeDone = {},
+                onSeeAll = { images ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(images))
+                    navController.navigate(Screen.PhotoViewer.route(0))
+                },
+                onImageClick = { index, images ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set("images", ArrayList(images))
+                    navController.navigate(Screen.PhotoViewer.route(index))
+                }
+            )
+            else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                navController.navigateUp()
+            }
         }
     }
 }
-@OptIn(ExperimentalLayoutApi::class)
+
 @Composable
 private fun UserProfileContent(
     navController: NavController,
@@ -153,7 +154,7 @@ private fun UserProfileContent(
         modifier = Modifier.fillMaxSize().background(AppColors.MainBackground),
         contentAlignment = Alignment.Center
     ) {
-        // Next profile luôn nằm dưới
+        // Next profile (background)
         if (nextProfile != null) {
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -171,8 +172,8 @@ private fun UserProfileContent(
                 ) {
                     item {
                         ProfileHero(
-                            profile = nextProfile,
-                            navController = navController
+                            navController = navController,
+                            profile = nextProfile
                         )
                     }
                     item {
@@ -194,7 +195,7 @@ private fun UserProfileContent(
             }
         }
 
-        // Current profile luôn nằm trên + draggable
+        // Current profile (foreground, draggable)
         if (currentProfile != null) {
             Box(
                 modifier = Modifier
@@ -238,8 +239,8 @@ private fun UserProfileContent(
                 ) {
                     item {
                         ProfileHero(
-                            profile = currentProfile,
-                            navController = navController
+                            navController = navController,
+                            profile = currentProfile
                         )
                     }
                     item {
@@ -278,47 +279,6 @@ private fun UserProfileContent(
     }
 }
 
-
-@Composable
-private fun ActionButton(
-    icon: ImageVector,
-    background: Color,
-    iconTint: Color,
-    size: Dp,
-    shadow: Dp,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .shadow(shadow, CircleShape, clip = false)
-            .clip(CircleShape)
-            .background(background)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(size * 0.5f)
-        )
-    }
-}
-
-private fun computeAge(birthday: String?): Int? {
-    if (birthday.isNullOrBlank()) return null
-    return try {
-        val year = when {
-            birthday.contains("/") -> birthday.split("/").getOrNull(2)?.toInt()
-            birthday.contains("-") -> birthday.split("-").getOrNull(0)?.toInt()
-            else -> null
-        } ?: return null
-        Calendar.getInstance().get(Calendar.YEAR) - year
-    } catch (_: Exception) { null }
-}
-
-
 @Composable
 fun ProfileActionsRow(
     onLike: () -> Unit,
@@ -355,5 +315,32 @@ fun ProfileActionsRow(
             size = 72.dp,
             shadow = 10.dp
         ) { onSuperLike() }
+    }
+}
+
+@Composable
+private fun ActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    background: Color,
+    iconTint: Color,
+    size: Dp,
+    shadow: Dp,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .shadow(shadow, CircleShape, clip = false)
+            .clip(CircleShape)
+            .background(background)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(size * 0.5f)
+        )
     }
 }

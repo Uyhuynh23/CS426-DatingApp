@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.dating.R
+import com.example.dating.data.model.ALL_INTERESTS
 import com.example.dating.data.model.User
-import com.example.dating.ui.profile.Interest
 import com.example.dating.ui.theme.AppColors
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -67,22 +67,7 @@ fun ProfileInfoCard(
     val location = user.location.orEmpty().ifBlank { "Ho Chi Minh City, Viet Nam" }
     val about = user.description.orEmpty().ifBlank { "My name is $name and I enjoy meeting new people and finding ways to help them have an uplifting experience..." }
 
-    val allInterests = listOf(
-        Interest("Photography", R.drawable.ic_interest_photography),
-        Interest("Shopping", R.drawable.ic_interest_shopping),
-        Interest("Karaoke", R.drawable.ic_interest_karaoke),
-        Interest("Yoga", R.drawable.ic_interest_yoga),
-        Interest("Cooking", R.drawable.ic_interest_cooking),
-        Interest("Tennis", R.drawable.ic_interest_tennis),
-        Interest("Run", R.drawable.ic_interest_run),
-        Interest("Swimming", R.drawable.ic_interest_swimming),
-        Interest("Art", R.drawable.ic_interest_art),
-        Interest("Traveling", R.drawable.ic_interest_travelling),
-        Interest("Extreme", R.drawable.ic_interest_extreme),
-        Interest("Music", R.drawable.ic_interest_music),
-        Interest("Drink", R.drawable.ic_interest_drink),
-        Interest("Video games", R.drawable.ic_interest_game)
-    ) // :contentReference[oaicite:1]{index=1}
+    val allInterests = ALL_INTERESTS
     val selected = user.interests.toSet()
     Surface(
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
