@@ -9,6 +9,11 @@ import javax.inject.Inject
 import com.example.dating.data.model.User
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.UserFilterPreferences
+import android.net.Uri
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 
 class UserRepository @Inject constructor(
@@ -76,8 +81,10 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun uploadAvatar(uid: String, uri: android.net.Uri): String {
-        // TODO: Implement Firebase Storage upload and return the URL
-        return ""
+        val ref = FirebaseStorage.getInstance()
+            .reference.child("users/$uid/avatar/${UUID.randomUUID()}.jpg")
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
     }
 
     suspend fun createUser(user: User): Resource<Unit> {
@@ -123,4 +130,31 @@ class UserRepository @Inject constructor(
         // Consider online if lastActive within 2 minutes
         return online && (System.currentTimeMillis() - lastActive < 2 * 60 * 1000)
     }
+
+    // ====== GALLERY APIS ======
+    suspend fun uploadGalleryImage(uid: String, uri: Uri): String {
+        val ref = FirebaseStorage.getInstance()
+            .reference.child("users/$uid/gallery/${UUID.randomUUID()}.jpg")
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
+    }
+
+    suspend fun addGalleryUrl(uid: String, url: String) {
+        firestore.collection("users").document(uid)
+            .update("imageUrl", FieldValue.arrayUnion(url))
+            .await()
+    }
+
+    suspend fun removeGalleryUrl(uid: String, url: String) {
+        firestore.collection("users").document(uid)
+            .update("imageUrl", FieldValue.arrayRemove(url))
+            .await()
+    }
+
+    suspend fun setGallery(uid: String, urls: List<String>) {
+        firestore.collection("users").document(uid)
+            .update("imageUrl", urls)
+            .await()
+    }
+
 }

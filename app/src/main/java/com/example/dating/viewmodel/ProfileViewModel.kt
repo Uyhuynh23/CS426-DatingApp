@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.net.Uri
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -26,6 +29,15 @@ class ProfileViewModel @Inject constructor(
 
     private val _updateState = MutableStateFlow<Resource<Unit>?>(null)
     val updateState: StateFlow<Resource<Unit>?> = _updateState
+
+    // ======= Gallery =======
+    private val _galleryUploading = MutableStateFlow(false)
+    val galleryUploading = _galleryUploading.asStateFlow()
+
+    private val _galleryError = MutableStateFlow<String?>(null)
+    val galleryError = _galleryError.asStateFlow()
+
+    private fun currentUid(): String? = FirebaseAuth.getInstance().currentUser?.uid
 
     init {
         val uid = auth.currentUser?.uid
@@ -139,4 +151,39 @@ class ProfileViewModel @Inject constructor(
     fun getCurrentUserId(): String? {
         return FirebaseAuth.getInstance().currentUser?.uid
     }
+
+    // ======= Max 5 images =======
+    fun addGalleryImage(imageUri: Uri) {
+        val uid = currentUid() ?: return
+        viewModelScope.launch {
+            _galleryError.value = null
+            _galleryUploading.value = true
+            try {
+                val current = user.value?.imageUrl ?: emptyList()
+                if (current.size >= 5) {
+                    _galleryError.value = "You can upload up to 5 photos."
+                    return@launch
+                }
+                val url = userRepository.uploadGalleryImage(uid, imageUri)
+                userRepository.addGalleryUrl(uid, url)
+            } catch (e: Exception) {
+                _galleryError.value = e.localizedMessage ?: "Upload failed."
+            } finally {
+                _galleryUploading.value = false
+            }
+        }
+    }
+
+    // ======= THÊM HÀM: Xoá ảnh khỏi gallery =======
+    fun removeGalleryImage(url: String) {
+        val uid = currentUid() ?: return
+        viewModelScope.launch {
+            try {
+                userRepository.removeGalleryUrl(uid, url)
+            } catch (e: Exception) {
+                _galleryError.value = e.localizedMessage ?: "Delete failed."
+            }
+        }
+    }
+
 }
