@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -72,6 +73,35 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = firebaseAuth.signInWithCredential(credential).await()
+            Resource.Success(result.user!!)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Resource.Failure(e)
+        }
+    }
+
+    override suspend fun signupWithFacebook(accessToken: String): Resource<FirebaseUser> {
+        return try {
+            val credential = FacebookAuthProvider.getCredential(accessToken)
+            val result = firebaseAuth.signInWithCredential(credential).await()
+
+            // (Optional) Initialize/update user profile doc if needed
+            result.user?.let { user ->
+                val uid = user.uid
+                db.collection("users").document(uid)
+                    .set(
+                        mapOf(
+                            "uid" to uid,
+                            "firstName" to (user.displayName?.substringBefore(" ") ?: ""),
+                            "lastName"  to (user.displayName?.substringAfter(" ") ?: ""),
+                            "avatarUrl" to (user.photoUrl?.toString() ?: ""),
+                            "isOnline"  to true,
+                            "lastActive" to System.currentTimeMillis()
+                        ),
+                        com.google.firebase.firestore.SetOptions.merge()
+                    ).await()
+            }
+
             Resource.Success(result.user!!)
         } catch (e: Exception) {
             e.printStackTrace()

@@ -104,4 +104,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
     implementation("androidx.compose.material3:material3:1.1.2")
+    
+    implementation("com.facebook.android:facebook-android-sdk:latest.release")
+
 }

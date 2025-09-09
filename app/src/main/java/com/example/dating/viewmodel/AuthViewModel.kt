@@ -30,6 +30,9 @@ class AuthViewModel @Inject constructor(
     private val _googleSignInFlow = MutableStateFlow<Resource<FirebaseUser>?>(null)
     val googleSignInFlow: StateFlow<Resource<FirebaseUser>?> = _googleSignInFlow
 
+    private val _facebookSignInFlow = MutableStateFlow<Resource<FirebaseUser>?>(null)
+    val facebookSignInFlow: StateFlow<Resource<FirebaseUser>?> = _facebookSignInFlow
+
     val currentUser: FirebaseUser?
         get() = repository.currentUser
 
@@ -74,6 +77,8 @@ class AuthViewModel @Inject constructor(
         _googleSignInFlow.value = result
     }
 
+
+
     private fun initGoogleSignIn(context: Context): GoogleSignInOptions {
         return GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken("227046142854-vuqvpvateg6m6gev12036jovd462t348.apps.googleusercontent.com") // Web client ID
@@ -106,6 +111,12 @@ class AuthViewModel @Inject constructor(
                 _googleSignInFlow.value = Resource.Failure(e)
             }
         }
+    }
+
+    fun signupWithFacebook(accessToken: String) = viewModelScope.launch {
+        _facebookSignInFlow.value = Resource.Loading
+        val result = repository.signupWithFacebook(accessToken)
+        _facebookSignInFlow.value = result
     }
 
 }
