@@ -97,7 +97,7 @@ fun SignUpScreen(
         val state = googleState ?: facebookState
         when (state) {
             is Resource.Success -> {
-                navController.navigate("home") {
+                navController.navigate("profile") {
                     popUpTo(Screen.Register.route) { inclusive = true }
                 }
             }
@@ -219,6 +219,20 @@ fun SignUpScreen(
                 modifier = Modifier.clickable { /* open policy */ })
         }
     }
+
+    // Add this logic before calling signupUser in your email/phone sign up flow:
+    // (Assume you have email and/or phone input)
+    // Example for email:
+    /*
+    val userExists by viewModel.userRepository.getUserByEmail(email).collectAsState(initial = null)
+    if (userExists != null) {
+        Toast.makeText(context, "User already exists!", Toast.LENGTH_SHORT).show()
+        return // Stop sign up process
+    } else {
+        viewModel.signupUser(name, email, password)
+    }
+    */
+    // You may need to implement getUserByEmail in UserRepository if not present.
 }
 
 @Composable

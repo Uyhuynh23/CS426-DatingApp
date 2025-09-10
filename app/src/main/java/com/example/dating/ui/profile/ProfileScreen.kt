@@ -35,7 +35,7 @@ import com.example.dating.viewmodel.ProfileViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.dating.data.model.User
 @Composable
-fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hiltViewModel()) {
+fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel= hiltViewModel()) {
     val userState by viewModel.user.collectAsState()
 
     var firstName by remember { mutableStateOf(userState?.firstName ?: "") }
@@ -230,12 +230,14 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hi
             onClick = {
                 isSaving = true
                 saveError = null
+                val uid = viewModel.getCurrentUserId() ?: ""
                 val user = viewModel.user.value?.copy(
                     firstName = firstName,
                     lastName = lastName,
                     birthday = birthday?.let { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it) },
+                    uid = uid // <-- Ensure UID is set!
                 ) ?: User(
-                    uid = "", // Set the correct uid if available
+                    uid = uid, // <-- Ensure UID is set!
                     firstName = firstName,
                     lastName = lastName,
                     birthday = birthday?.let { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it) }
