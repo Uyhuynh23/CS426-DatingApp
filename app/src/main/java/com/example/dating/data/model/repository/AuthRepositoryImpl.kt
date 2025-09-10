@@ -80,28 +80,10 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun signupWithFacebook(accessToken: String): Resource<FirebaseUser> {
+    override suspend fun signupWithFacebook(token: String): Resource<FirebaseUser> {
         return try {
-            val credential = FacebookAuthProvider.getCredential(accessToken)
+            val credential = FacebookAuthProvider.getCredential(token)
             val result = firebaseAuth.signInWithCredential(credential).await()
-
-            // (Optional) Initialize/update user profile doc if needed
-            result.user?.let { user ->
-                val uid = user.uid
-                db.collection("users").document(uid)
-                    .set(
-                        mapOf(
-                            "uid" to uid,
-                            "firstName" to (user.displayName?.substringBefore(" ") ?: ""),
-                            "lastName"  to (user.displayName?.substringAfter(" ") ?: ""),
-                            "avatarUrl" to (user.photoUrl?.toString() ?: ""),
-                            "isOnline"  to true,
-                            "lastActive" to System.currentTimeMillis()
-                        ),
-                        com.google.firebase.firestore.SetOptions.merge()
-                    ).await()
-            }
-
             Resource.Success(result.user!!)
         } catch (e: Exception) {
             e.printStackTrace()

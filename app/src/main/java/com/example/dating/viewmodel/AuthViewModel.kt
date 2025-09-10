@@ -113,10 +113,12 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun signupWithFacebook(accessToken: String) = viewModelScope.launch {
-        _facebookSignInFlow.value = Resource.Loading
-        val result = repository.signupWithFacebook(accessToken)
-        _facebookSignInFlow.value = result
+    fun signupWithFacebook(token: String) {
+        viewModelScope.launch {
+            _facebookSignInFlow.value = Resource.Loading
+            val result = repository.signupWithFacebook(token)
+            _facebookSignInFlow.value = result
+        }
     }
 
 }

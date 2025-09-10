@@ -12,7 +12,7 @@ interface AuthRepository {
     suspend fun signup(name: String, email: String, password: String): Resource<FirebaseUser>
     suspend fun signupWithGoogle(idToken: String): Resource<FirebaseUser>
 
-    suspend fun signupWithFacebook(accesstoken: String): Resource<FirebaseUser>
+    suspend fun signupWithFacebook(token: String): Resource<FirebaseUser>
     fun logout()
     suspend fun signupWithEmailVerification(email: String, password: String): String?
 
