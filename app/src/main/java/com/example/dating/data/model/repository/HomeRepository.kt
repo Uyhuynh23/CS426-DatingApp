@@ -29,6 +29,8 @@ class HomeRepository @Inject constructor(
         }
         val snapshot = db.collection("users").get().await()
         val filteredDocs = snapshot.documents.filter { doc ->
+            //Get shared preferences of the document
+            doc.get("filterPreferences") // Just to ensure the field exists
             filteringRepository.filterUser(doc, currentUserId, currentUserDoc, filterPrefs)
         }
         // Get current user object for recommendation

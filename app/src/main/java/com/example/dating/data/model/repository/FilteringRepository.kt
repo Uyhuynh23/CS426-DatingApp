@@ -31,6 +31,14 @@ class FilteringRepository @Inject constructor() {
             ?: (currentUserDoc.get("lng") as? Float)?.toDouble()
             ?: (currentUserDoc.get("lng") as? Long)?.toDouble()
 
+        // --- NEW FILTER: doc's filterPreferences.preferredGender must match current user's gender ---
+        val docFilterPrefs = doc.get("filterPreferences") as? Map<*, *>
+        val docPreferredGender = docFilterPrefs?.get("preferredGender") as? String
+        val currentUserGender = currentUserDoc.getString("gender")
+        if (docPreferredGender != null && docPreferredGender != "Both" && currentUserGender != docPreferredGender) {
+            return false
+        }
+
         if (!filterGender(gender, filterPrefs)) return false
         if (!filterAge(birthday, filterPrefs)) return false
         if (!filterDistance(distance, filterPrefs)) return false
