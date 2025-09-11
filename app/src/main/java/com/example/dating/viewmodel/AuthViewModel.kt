@@ -84,6 +84,13 @@ class AuthViewModel @Inject constructor(
         _googleSignInFlow.value = null
     }
 
+    fun checkIfEmailExists(email: String, onResult: (List<String>) -> Unit) {
+        viewModelScope.launch {
+            val methods = repository.checkIfEmailExists(email)
+            onResult(methods)
+        }
+    }
+
 
     suspend fun signupUserWithEmailVerification(email: String, password: String): String? {
         val result = repository.signupWithEmailVerification(email, password)

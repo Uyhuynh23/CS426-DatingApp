@@ -139,19 +139,31 @@ fun EmailScreen(
                     isLoading = true
                     errorMessage = null
                     focusManager.clearFocus()
+
                     coroutineScope.launch {
-                        val signupResult = authViewModel.signupUserWithEmailVerification(email, password)
-                        isLoading = false
-                        if (signupResult == null) {
-                            errorMessage = "Verification email sent. Please check your inbox."
-                            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                            if (uid != null) {
-                                val newUser = com.example.dating.data.model.User(uid = uid)
-                                profileViewModel.createUser(newUser)
+                        authViewModel.checkIfEmailExists(email) { methods ->
+                            if (methods.isNotEmpty()) {
+                                // Email is already registered
+                                isLoading = false
+                                errorMessage = "This email is already used. Please log in instead."
+                            } else {
+                                // Proceed to sign up
+                                coroutineScope.launch {
+                                    val signupResult = authViewModel.signupUserWithEmailVerification(email, password)
+                                    isLoading = false
+                                    if (signupResult == null) {
+                                        errorMessage = "Verification email sent. Please check your inbox."
+                                        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                                        if (uid != null) {
+                                            val newUser = com.example.dating.data.model.User(uid = uid)
+                                            profileViewModel.createUser(newUser)
+                                        }
+                                        startVerificationCheck = true
+                                    } else {
+                                        errorMessage = signupResult
+                                    }
+                                }
                             }
-                            startVerificationCheck = true
-                        } else {
-                            errorMessage = signupResult
                         }
                     }
                 },
@@ -171,6 +183,7 @@ fun EmailScreen(
                     Text("Continue")
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
             errorMessage?.let {
                 Text(

@@ -106,4 +106,14 @@ class AuthRepositoryImpl @Inject constructor(
         firebaseAuth.signOut()
     }
 
+    override suspend fun checkIfEmailExists(email: String): List<String> {
+        return try {
+            val result = firebaseAuth.fetchSignInMethodsForEmail(email).await()
+            result.signInMethods ?: emptyList()
+        } catch (e: Exception) {
+            emptyList() // or rethrow if you want to surface the error
+        }
+    }
+
+
 }

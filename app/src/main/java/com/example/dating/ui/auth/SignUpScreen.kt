@@ -62,7 +62,14 @@ fun SignUpScreen(
             if (idToken.isNullOrEmpty()) {
                 Toast.makeText(context, "Failed to get Google token", Toast.LENGTH_SHORT).show()
             } else {
-                viewModel.signupWithGoogle(idToken)
+                viewModel.checkIfEmailExists(account.email ?: "") { methods ->
+                    if (methods.isNotEmpty()) {
+                        Toast.makeText(context, "This email is already used. Please log in instead.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        viewModel.signupWithGoogle(idToken)
+                    }
+                }
+
             }
         } catch (e: ApiException) {
             Toast.makeText(context, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
