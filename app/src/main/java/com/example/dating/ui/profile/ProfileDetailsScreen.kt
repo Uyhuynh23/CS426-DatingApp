@@ -90,9 +90,9 @@ import coil.compose.AsyncImage
 @Composable
 fun ProfileDetailsScreen(
     navController: NavController,
-    profileViewModel: ProfileViewModel = hiltViewModel(),
+    profileViewModel: ProfileViewModel,
+    authViewModel: AuthViewModel,
     storyViewModel: StoryViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel() // <-- Add AuthViewModel
 ) {
     val user by profileViewModel.user.collectAsState()
     val updateState by profileViewModel.updateState.collectAsState()
@@ -221,7 +221,8 @@ fun ProfileContent(
                 }
                 TextButton(
                     onClick = {
-                        authViewModel.logout()
+                        authViewModel.logout(profileViewModel)
+                        authViewModel.clearGoogleSignInState()
                         navController.navigate("login") {
                             popUpTo("root_graph") { inclusive = true }
                         }

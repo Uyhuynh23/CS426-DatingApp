@@ -72,7 +72,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                     navController.getBackStackEntry("root_graph")
                 }
                 val profileViewModel: ProfileViewModel = hiltViewModel(parentEntry)
-                ProfileDetailsScreen(navController = navController, profileViewModel)
+                ProfileDetailsScreen(navController = navController, profileViewModel,authViewModel)
             }
 
             // Add this composable for posting story
@@ -208,7 +208,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                     navController.getBackStackEntry("root_graph")
                 }
                 val profileViewModel: ProfileViewModel = hiltViewModel(parentEntry)
-                ProfileDetailsScreen(navController = navController, profileViewModel)
+                ProfileDetailsScreen(navController = navController, profileViewModel, authViewModel)
             }
 
 

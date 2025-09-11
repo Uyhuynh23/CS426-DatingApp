@@ -36,6 +36,11 @@ class AuthViewModel @Inject constructor(
     val currentUser: FirebaseUser?
         get() = repository.currentUser
 
+    // Track last login method
+    enum class LoginMethod { NORMAL, GOOGLE, FACEBOOK }
+    var lastLoginMethod: LoginMethod? = null
+        private set
+
     init {
         if (repository.currentUser != null) {
             _loginFlow.value = Resource.Success(repository.currentUser!!)
@@ -46,19 +51,39 @@ class AuthViewModel @Inject constructor(
         _loginFlow.value = Resource.Loading
         val result = repository.login(email, password)
         _loginFlow.value = result
+        if (result is Resource.Success) {
+            lastLoginMethod = LoginMethod.NORMAL
+        }
     }
 
     fun signupUser(name: String, email: String, password: String) = viewModelScope.launch {
         _signupFlow.value = Resource.Loading
         val result = repository.signup(name, email, password)
         _signupFlow.value = result
+        if (result is Resource.Success) {
+            lastLoginMethod = LoginMethod.NORMAL
+        }
     }
 
-    fun logout() {
-        repository.logout()
-        _loginFlow.value = null
-        _signupFlow.value = null
+    fun logout(profileViewModel: ProfileViewModel) {
+        try {
+            repository.logout()
+            _loginFlow.value = null
+            _signupFlow.value = null
+            _googleSignInFlow.value = null
+            _facebookSignInFlow.value = null
+            lastLoginMethod = null // <-- Clear login method on logout
+            profileViewModel.clearUser()
+        } catch (e: Exception) {
+            Log.e("AuthViewModel", "Error during logout", e)
+        }
+        // currentUser?.reload() // Remove reload, not needed after logout
     }
+
+    fun clearGoogleSignInState() {
+        _googleSignInFlow.value = null
+    }
+
 
     suspend fun signupUserWithEmailVerification(email: String, password: String): String? {
         val result = repository.signupWithEmailVerification(email, password)
@@ -75,6 +100,9 @@ class AuthViewModel @Inject constructor(
         _googleSignInFlow.value = Resource.Loading
         val result = repository.signupWithGoogle(idToken)
         _googleSignInFlow.value = result
+        if (result is Resource.Success) {
+            lastLoginMethod = LoginMethod.GOOGLE
+        }
     }
 
 
@@ -118,6 +146,9 @@ class AuthViewModel @Inject constructor(
             _facebookSignInFlow.value = Resource.Loading
             val result = repository.signupWithFacebook(token)
             _facebookSignInFlow.value = result
+            if (result is Resource.Success) {
+                lastLoginMethod = LoginMethod.FACEBOOK
+            }
         }
     }
 

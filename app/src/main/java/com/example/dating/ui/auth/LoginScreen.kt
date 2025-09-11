@@ -32,11 +32,18 @@ import com.google.android.gms.common.api.ApiException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
+fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    // Prevent auto-navigation to home if user is logged out
     val authResource = viewModel?.loginFlow?.collectAsState()
-    val isLoginFailed = authResource?.value is Resource.Failure
+    val isLoggedOut = authResource?.value is Resource.Failure &&
+        (authResource.value as? Resource.Failure)?.exception?.message == "User logged out"
+
+    // Add this derived state for login failure
+    val isLoginFailed = authResource?.value is Resource.Failure &&
+        (authResource.value as? Resource.Failure)?.exception?.message != "User logged out"
+
     var isEmailFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
     var loginClicked by remember { mutableStateOf(false) }
@@ -64,6 +71,8 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
 
     // Observe Google Sign-In state
     LaunchedEffect(googleSignInState?.value) {
+        if (isLoggedOut || viewModel.currentUser == null) return@LaunchedEffect
+        // Don't navigate to home if just logged out
         when (val state = googleSignInState?.value) {
             is Resource.Success -> {
                 Log.d("GoogleSignIn", "Authentication successful")
@@ -253,9 +262,11 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
                             }
                             is Resource.Success -> {
                                 LaunchedEffect(Unit) {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
-                                        launchSingleTop = true
+                                    if (!isLoggedOut) {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
                                     }
                                     loginClicked = false
 

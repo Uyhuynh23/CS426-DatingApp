@@ -120,6 +120,10 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun clearUser() {
+        _user.value = null
+    }
+
     fun uploadAvatar(uri: android.net.Uri) {
         val uid = auth.currentUser?.uid ?: return
         val storage = FirebaseStorage.getInstance()

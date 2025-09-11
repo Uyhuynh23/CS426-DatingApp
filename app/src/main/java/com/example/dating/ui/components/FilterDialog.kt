@@ -50,8 +50,8 @@ fun FilterDialog(
     if (!show) return
     val userState by userViewModel.user.collectAsState()
     val filterPrefs = userState?.filterPreferences
-    var selectedInterest by remember { mutableStateOf(filterPrefs?.preferredGender ?: "Woman") }
-    var location by remember { mutableStateOf(userState?.location ?: "Chicago, USA") }
+    var selectedInterest by remember { mutableStateOf(filterPrefs?.preferredGender ?: "Both") }
+    var location by remember { mutableStateOf(userState?.location ?: " ") }
     var distance by remember { mutableStateOf(filterPrefs?.maxDistance?.toFloat() ?: 40f) }
     var ageRange by remember { mutableStateOf((filterPrefs?.minAge?.toFloat() ?: 20f)..(filterPrefs?.maxAge?.toFloat() ?: 28f)) }
 

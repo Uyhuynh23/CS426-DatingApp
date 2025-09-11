@@ -42,7 +42,7 @@ import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun SignUpScreen(
-    viewModel: AuthViewModel = hiltViewModel(),
+    viewModel: AuthViewModel,
     navController: NavController
 ) {
     val context = LocalContext.current
