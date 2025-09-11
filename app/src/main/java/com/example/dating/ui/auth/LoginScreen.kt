@@ -1,3 +1,9 @@
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +26,9 @@ import com.example.dating.ui.theme.AppColors.Main_Secondary1
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,16 +41,60 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
     var isPasswordFocused by remember { mutableStateOf(false) }
     var loginClicked by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-
-
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .clickable(
-            indication = null,
-            interactionSource = remember { MutableInteractionSource() }
-        ) {
-            focusManager.clearFocus()
+    val context = LocalContext.current
+    val googleSignInState = viewModel?.googleSignInFlow?.collectAsState()
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            account?.idToken?.let { token ->
+                Log.d("GoogleSignIn", "ID Token received: ${token.take(10)}...")
+                viewModel?.signupWithGoogle(token)
+            } ?: run {
+                Log.e("GoogleSignIn", "ID Token is null")
+                Toast.makeText(context, "Failed to get Google Sign In token", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: ApiException) {
+            Log.e("GoogleSignIn", "Sign in failed: ${e.message}")
+            Toast.makeText(context, "Google Sign In failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    // Observe Google Sign-In state
+    LaunchedEffect(googleSignInState?.value) {
+        when (val state = googleSignInState?.value) {
+            is Resource.Success -> {
+                Log.d("GoogleSignIn", "Authentication successful")
+                navController.navigate("home") {
+                    popUpTo("login") { inclusive = true }
+                }
+            }
+            is Resource.Failure -> {
+                Log.e("GoogleSignIn", "Authentication failed: ${state.exception.message}")
+                Toast.makeText(
+                    context,
+                    "Authentication failed: ${state.exception.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            is Resource.Loading -> {
+                Log.d("GoogleSignIn", "Authentication in progress...")
+            }
+            null -> { /* Initial state */ }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                focusManager.clearFocus()
+            }
     ) {
         Column(
             modifier = Modifier
@@ -119,6 +172,32 @@ fun LoginScreen(viewModel: AuthViewModel?, navController: NavController) {
                 )
             ) {
                 Text("Login", style = MaterialTheme.typography.titleMedium)
+            }
+
+            // Add Google login button below password field
+            Button(
+                onClick = {
+                    viewModel?.performGoogleSignIn(context) { intent ->
+                        googleSignInLauncher.launch(intent)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = com.example.dating.R.drawable.ic_google),
+                    contentDescription = "Google",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Login with Google")
             }
 
             Row(

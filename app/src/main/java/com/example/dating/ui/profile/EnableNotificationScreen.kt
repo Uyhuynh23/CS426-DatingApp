@@ -1,5 +1,8 @@
 package com.example.dating.ui.profile
 
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +27,16 @@ import com.example.dating.ui.theme.AppColors
 
 @Composable
 fun EnableNotificationScreen(navController: NavController) {
+    // Permission launcher for notification
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            // Điều hướng đến home bất kể quyền có được cấp hay không
+            // Bạn có thể xử lý logic khác ở đây nếu cần (ví dụ: lưu trạng thái permission)
+            navController.navigate("home")
+        }
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -72,7 +85,7 @@ fun EnableNotificationScreen(navController: NavController) {
 
         // Title
         Text(
-            text = "Enable notification’s",
+            text = "Enable notification's",
             fontWeight = FontWeight.Bold,
             fontSize = 22.sp,
             color = AppColors.Text_Black,
@@ -94,8 +107,13 @@ fun EnableNotificationScreen(navController: NavController) {
         // Enable Button
         Button(
             onClick = {
-                // TODO: Yêu cầu permission POST_NOTIFICATIONS (Android 13+)
-                navController.navigate("home")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Yêu cầu quyền thông báo cho Android 13+ (API level 33+)
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    // Đối với Android < 13, không cần yêu cầu quyền thông báo
+                    navController.navigate("home")
+                }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF1FC)),
             shape = RoundedCornerShape(16.dp),
@@ -113,5 +131,3 @@ fun EnableNotificationScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
-
-

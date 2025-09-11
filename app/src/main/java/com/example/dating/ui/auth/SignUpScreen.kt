@@ -1,82 +1,114 @@
 package com.example.dating.ui.auth
 
-import android.content.Context
-import android.content.Intent
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.dating.R
-import com.example.dating.ui.theme.AppColors
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.example.dating.navigation.Screen
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.firebase.auth.GoogleAuthProvider
 import com.example.dating.data.model.Resource
+import com.example.dating.navigation.Screen
+import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.AuthViewModel
-import com.google.firebase.auth.FirebaseUser
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.facebook.login.LoginManager
+import com.facebook.login.LoginResult
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 
 @Composable
-fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
+fun SignUpScreen(
+    viewModel: AuthViewModel = hiltViewModel(),
+    navController: NavController
+) {
     val context = LocalContext.current
-    val googleSignInState = viewModel?.googleSignInFlow?.collectAsState()
 
-    // Google Sign-In configuration
-    val googleSignInLauncher = rememberLauncherForActivityResult(
+    // --- Observe auth states ---
+    val googleState by viewModel.googleSignInFlow.collectAsState()
+    val facebookState by viewModel.facebookSignInFlow.collectAsState()
+
+    // --- Google launcher ---
+    val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
-            account.idToken?.let { idToken ->
-                Log.d("GoogleSignIn", "ID Token received")
-                viewModel?.signupWithGoogle(idToken)
-            } ?: run {
-                Log.e("GoogleSignIn", "ID Token is null")
+            val idToken = account?.idToken
+            if (idToken.isNullOrEmpty()) {
+                Toast.makeText(context, "Failed to get Google token", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.signupWithGoogle(idToken)
             }
         } catch (e: ApiException) {
-            Log.e("GoogleSignIn", "Sign in failed with code: ${e.statusCode}, message: ${e.message}")
+            Toast.makeText(context, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
+    // --- Facebook callback manager + registration ---
+    val callbackManager = LocalFacebookCallbackManager.current
 
-    // Observe Google Sign-In state
-    LaunchedEffect(googleSignInState) {
-        when (val state = googleSignInState) {
-            is Resource.Success<FirebaseUser> -> {
-                Log.d("GoogleSignIn", "Authentication successful")
-                navController.navigate("home") {
-                    popUpTo("register") { inclusive = true }
+    LaunchedEffect(Unit) {
+        com.facebook.login.LoginManager.getInstance().registerCallback(
+            callbackManager,
+            object : com.facebook.FacebookCallback<com.facebook.login.LoginResult> {
+                override fun onSuccess(result: com.facebook.login.LoginResult) {
+                    val token = result.accessToken.token
+                    viewModel.signupWithFacebook(token)
+                }
+
+                override fun onCancel() {
+                    Toast.makeText(context, "Facebook login canceled", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onError(error: com.facebook.FacebookException) {
+                    Toast.makeText(context, "Facebook login failed: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    // --- React to auth results (both providers) ---
+    LaunchedEffect(googleState, facebookState) {
+        val state = googleState ?: facebookState
+        when (state) {
+            is Resource.Success -> {
+                navController.navigate("profile") {
+                    popUpTo(Screen.Register.route) { inclusive = true }
                 }
             }
             is Resource.Failure -> {
-                Log.e("GoogleSignIn", "Authentication failed: ${state.exception.message}")
+                Toast.makeText(context, state.exception.message ?: "Auth failed", Toast.LENGTH_SHORT).show()
             }
-            is Resource.Loading -> {
-                Log.d("GoogleSignIn", "Authentication in progress...")
-            }
-            null -> { /* Initial state */ }
+            is Resource.Loading, null -> Unit
         }
     }
+
+    // --- UI ---
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -84,18 +116,15 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(60.dp))
+        Spacer(Modifier.height(60.dp))
 
-        // Logo
         Image(
             painter = painterResource(id = R.drawable.ic_logo),
             contentDescription = "App Logo",
-            modifier = Modifier
-                .size(100.dp)
-                .shadow(16.dp, CircleShape)
+            modifier = Modifier.size(100.dp).shadow(16.dp, CircleShape)
         )
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(Modifier.height(36.dp))
 
         Text(
             text = "Sign up to continue",
@@ -105,9 +134,9 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(Modifier.height(40.dp))
 
-        // Email Button
+        // Email
         Button(
             onClick = { navController.navigate(Screen.EmailScreen.route) },
             colors = ButtonDefaults.buttonColors(
@@ -115,16 +144,12 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
                 contentColor = Color.Black
             ),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text("Continue with email")
-        }
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) { Text("Continue with email") }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // Phone Button
+        // Phone
         Button(
             onClick = { navController.navigate("phone_number") },
             colors = ButtonDefaults.buttonColors(
@@ -132,20 +157,12 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
                 contentColor = Color.White
             ),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text("Use phone number")
-        }
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) { Text("Use phone number") }
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(Modifier.height(36.dp))
 
-        // Divider
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Divider(Modifier.weight(1f), color = AppColors.Text_LightBlack, thickness = 0.5.dp)
             Text(
                 "  or sign up with  ",
@@ -157,9 +174,9 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
             Divider(Modifier.weight(1f), color = AppColors.Text_LightBlack, thickness = 0.5.dp)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Social Login Row
+        // Social buttons
         Row(
             horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
             modifier = Modifier.fillMaxWidth()
@@ -167,49 +184,59 @@ fun SignUpScreen(viewModel:AuthViewModel?, navController: NavController) {
             SocialSquareButton(
                 iconRes = R.drawable.ic_facebook,
                 contentDescription = "Facebook",
-                onClick = { /* Facebook sign in */ }
+                onClick = {
+                    // Ensure you’ve added your App ID/Client Token + manifest setup already
+                    LoginManager.getInstance().logOut() // optional: clear any stale session
+                    LoginManager.getInstance().logInWithReadPermissions(
+                        /* activity = */ androidx.activity.ComponentActivity::class.java
+                            .cast(context as? androidx.activity.ComponentActivity) ?: return@SocialSquareButton,
+                        listOf("email", "public_profile")
+                    )
+                },
+                isLoading = facebookState is Resource.Loading
             )
             SocialSquareButton(
                 iconRes = R.drawable.ic_google,
                 contentDescription = "Google",
                 onClick = {
-                    viewModel?.performGoogleSignIn(context) { intent ->
-                        googleSignInLauncher.launch(intent)
+                    viewModel.performGoogleSignIn(context) { intent ->
+                        googleLauncher.launch(intent)
                     }
                 },
-                isLoading = googleSignInState is Resource.Loading
+                isLoading = googleState is Resource.Loading
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(Modifier.weight(1f))
 
-        // Terms and Privacy
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 28.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 28.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Terms of use",
-                color = AppColors.Main_Primary,
-                fontSize = 14.sp,
-                modifier = Modifier.clickable { /* open terms link */ }
-            )
-            Text(
-                text = "Privacy Policy",
-                color = AppColors.Main_Primary,
-                fontSize = 14.sp,
-                modifier = Modifier.clickable { /* open policy link */ }
-            )
+            Text("Terms of use", color = AppColors.Main_Primary, fontSize = 14.sp,
+                modifier = Modifier.clickable { /* open terms */ })
+            Text("Privacy Policy", color = AppColors.Main_Primary, fontSize = 14.sp,
+                modifier = Modifier.clickable { /* open policy */ })
         }
     }
+
+    // Add this logic before calling signupUser in your email/phone sign up flow:
+    // (Assume you have email and/or phone input)
+    // Example for email:
+    /*
+    val userExists by viewModel.userRepository.getUserByEmail(email).collectAsState(initial = null)
+    if (userExists != null) {
+        Toast.makeText(context, "User already exists!", Toast.LENGTH_SHORT).show()
+        return // Stop sign up process
+    } else {
+        viewModel.signupUser(name, email, password)
+    }
+    */
+    // You may need to implement getUserByEmail in UserRepository if not present.
 }
 
-
-
 @Composable
-fun SocialSquareButton(
+private fun SocialSquareButton(
     iconRes: Int,
     contentDescription: String,
     onClick: () -> Unit,
@@ -228,10 +255,7 @@ fun SocialSquareButton(
         contentAlignment = Alignment.Center
     ) {
         if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp
-            )
+            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
         } else {
             Image(
                 painter = painterResource(id = iconRes),
@@ -242,21 +266,3 @@ fun SocialSquareButton(
         }
     }
 }
-//
-//private fun signInWithGoogle(
-//    context: Context,
-//    launcher: ActivityResultLauncher<Intent>
-//) {
-//    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-//        .requestEmail()
-//        .requestProfile()
-//        .requestIdToken("224972776925-jcghkv22uojd0ka97ag7ebqn8rkuu0gl.apps.googleusercontent.com")
-//        .build()
-//
-//    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-//
-//    googleSignInClient.signOut().addOnCompleteListener {
-//        val signInIntent = googleSignInClient.signInIntent
-//        launcher.launch(signInIntent)
-//    }
-//}

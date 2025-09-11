@@ -1,5 +1,6 @@
 package com.example.dating.ui.profile
 
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -36,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,10 +69,22 @@ import com.example.dating.ui.components.InterestsSection
 import com.example.dating.ui.components.JobDropdown
 import com.example.dating.ui.components.LocationField
 import com.example.dating.ui.components.NameFields
+import com.example.dating.ui.components.CountryData
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.AuthViewModel
 import com.example.dating.viewmodel.ProfileViewModel
 import com.example.dating.viewmodel.StoryViewModel
+import org.json.JSONArray
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.shape.RoundedCornerShape
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +189,13 @@ fun ProfileContent(
     // Observe user's own stories
     val myStories by storyViewModel.myStories.collectAsState()
     val validStories = myStories.filter { it.expiresAt ?: 0 > System.currentTimeMillis() }
+
+    val context = LocalContext.current
+    var countries by remember { mutableStateOf<List<CountryData>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        countries = loadCountriesFromAssets(context)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -419,8 +441,10 @@ fun ProfileContent(
                         onJobChange = { editableJob = it })
                     Spacer(modifier = Modifier.height(8.dp))
                     LocationField(
-                        location = editableLocation, isEditMode = isEditMode,
-                        onLocationChange = { editableLocation = it }
+                        location = editableLocation,
+                        isEditMode = isEditMode,
+                        onLocationChange = { editableLocation = it },
+                        countries = countries
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DescriptionField(
@@ -445,6 +469,19 @@ fun ProfileContent(
                         selectedInterests = selectedInterests,
                         isEditMode = isEditMode
                     )
+                    Spacer(Modifier.height(16.dp))
+
+                    // ===== Gallery (max 5) =====
+                    val liveUser by profileViewModel.user.collectAsState()
+                    val galleryImages = liveUser?.imageUrl ?: initialProfile.imageUrl
+
+                    GallerySection(
+                        navController = navController,
+                        images = galleryImages,
+                        isEditMode = isEditMode,
+                        onAdd = { uri -> profileViewModel.addGalleryImage(uri) },
+                        onRemove = { url -> profileViewModel.removeGalleryImage(url) }
+                    )
                 }
             }
         }
@@ -467,5 +504,136 @@ fun ProfileContent(
             onDismiss = { showCalendar = false },
             date = initialDate // <-- Pass initial date here
         )
+    }
+}
+
+@Composable
+private fun GallerySection(
+    navController: NavController,
+    images: List<String>,
+    isEditMode: Boolean,
+    onAdd: (android.net.Uri) -> Unit,
+    onRemove: (String) -> Unit
+) {
+    val remaining = (6 - images.size).coerceAtLeast(0)
+
+    val addImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) onAdd(uri)
+    }
+
+    Column(Modifier.fillMaxWidth()) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Gallery",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (isEditMode) {
+                TextButton(
+                    onClick = { if (remaining > 0) addImageLauncher.launch("image/*") },
+                ) {
+                    Text(
+                        if (remaining > 0) "Add photo ($remaining left)" else "Capacity full",
+                        color = AppColors.Text_Pink
+                    )
+                }
+            } else {
+                if (images.isNotEmpty()) {
+                    TextButton(onClick = {
+                        navController.currentBackStackEntry?.savedStateHandle
+                            ?.set("images", ArrayList(images))
+                        navController.navigate(
+                            com.example.dating.navigation.Screen.PhotoViewer.route(0)
+                        )
+                    }) { Text("See all", color = AppColors.Text_Pink) }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        if (images.isEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No images available", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().height(200.dp)
+            ) {
+                itemsIndexed(images) { index, url ->
+                    Box {
+                        AsyncImage(
+                            model = url,
+                            contentDescription = null,
+                            placeholder = painterResource(com.example.dating.R.drawable.ic_avatar),
+                            error = painterResource(com.example.dating.R.drawable.ic_avatar),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable(enabled = !isEditMode) {
+                                    navController.currentBackStackEntry?.savedStateHandle
+                                        ?.set("images", ArrayList(images))
+                                    navController.navigate(
+                                        com.example.dating.navigation.Screen.PhotoViewer.route(index)
+                                    )
+                                }
+                        )
+
+                        // Delete Button (exist in editing mode)
+                        if (isEditMode) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.55f))
+                                    .align(Alignment.TopEnd)
+                                    .clickable { onRemove(url) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("×", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Helper function to load countries from assets
+fun loadCountriesFromAssets(context: Context): List<CountryData> {
+    return try {
+        val inputStream = context.assets.open("countries.json")
+        val jsonString = inputStream.bufferedReader().use { it.readText() }
+        val jsonArray = JSONArray(jsonString)
+        List(jsonArray.length()) { i ->
+            val obj = jsonArray.getJSONObject(i)
+            val name = obj.getString("name")
+            val citiesJson = obj.getJSONArray("cities")
+            val cities = List(citiesJson.length()) { j -> citiesJson.getString(j) }
+            CountryData(name, cities)
+        }
+    } catch (e: Exception) {
+        emptyList()
     }
 }

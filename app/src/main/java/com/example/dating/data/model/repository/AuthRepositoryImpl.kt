@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -71,6 +72,17 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun signupWithGoogle(idToken: String): Resource<FirebaseUser> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = firebaseAuth.signInWithCredential(credential).await()
+            Resource.Success(result.user!!)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Resource.Failure(e)
+        }
+    }
+
+    override suspend fun signupWithFacebook(token: String): Resource<FirebaseUser> {
+        return try {
+            val credential = FacebookAuthProvider.getCredential(token)
             val result = firebaseAuth.signInWithCredential(credential).await()
             Resource.Success(result.user!!)
         } catch (e: Exception) {
