@@ -1,5 +1,6 @@
 package com.example.dating.ui.auth
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,13 +26,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import com.example.dating.R
 import com.example.dating.data.model.Resource
 import com.example.dating.navigation.Screen
 import com.example.dating.ui.theme.AppColors
 import com.example.dating.viewmodel.AuthViewModel
+import com.example.dating.viewmodel.ProfileViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.facebook.CallbackManager
 import com.facebook.FacebookCallback
 import com.facebook.FacebookException
@@ -39,17 +41,26 @@ import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.launch
+import com.example.dating.data.model.User
 
 @Composable
 fun SignUpScreen(
-    viewModel: AuthViewModel,
-    navController: NavController
+    navController: NavController,
+    authViewModel: AuthViewModel = hiltViewModel(),
+    profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
     // --- Observe auth states ---
-    val googleState by viewModel.googleSignInFlow.collectAsState()
-    val facebookState by viewModel.facebookSignInFlow.collectAsState()
+    val googleState by authViewModel.googleSignInFlow.collectAsState()
+    val facebookState by authViewModel.facebookSignInFlow.collectAsState()
+    val uid = authViewModel.currentUser?.uid
+
+    // Correct way to collect userState from Flow<User?>
+
 
     // --- Google launcher ---
     val googleLauncher = rememberLauncherForActivityResult(
@@ -62,7 +73,7 @@ fun SignUpScreen(
             if (idToken.isNullOrEmpty()) {
                 Toast.makeText(context, "Failed to get Google token", Toast.LENGTH_SHORT).show()
             } else {
-                viewModel.signupWithGoogle(idToken)
+                authViewModel.signupWithGoogle(idToken)
             }
         } catch (e: ApiException) {
             Toast.makeText(context, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -78,7 +89,7 @@ fun SignUpScreen(
             object : com.facebook.FacebookCallback<com.facebook.login.LoginResult> {
                 override fun onSuccess(result: com.facebook.login.LoginResult) {
                     val token = result.accessToken.token
-                    viewModel.signupWithFacebook(token)
+                    authViewModel.signupWithFacebook(token)
                 }
 
                 override fun onCancel() {
@@ -93,21 +104,94 @@ fun SignUpScreen(
     }
 
     // --- React to auth results (both providers) ---
-    LaunchedEffect(googleState, facebookState) {
-        val state = googleState ?: facebookState
-        when (state) {
+
+    //GOOGLE AUTH
+    LaunchedEffect(googleState) {
+        when (val state = googleState) {
             is Resource.Success -> {
-                // Navigate to home for both Google and Facebook sign-in success
-                navController.navigate("profile") {
-                    popUpTo(Screen.Register.route) { inclusive = true }
+                val uid = authViewModel.currentUser?.uid
+                if (uid != null) {
+                    authViewModel.getUser(uid).collect { user ->
+                        if (user != null) {
+                            val hasData = listOf(
+                                user.firstName, user.lastName, user.birthday, user.gender,
+                                user.job, user.location, user.description, user.avatarUrl
+                            ).any { it != null && it.toString().isNotBlank() }
+                            val hasInterests = user.interests?.isNotEmpty() == true
+                            val hasImages = user.imageUrl?.isNotEmpty() == true
+
+                            if (hasData || hasInterests || hasImages) {
+                                authViewModel.logout(profileViewModel)
+                                profileViewModel.clearUser()
+                                Toast.makeText(context, "This account already exists. Please log in.", Toast.LENGTH_LONG).show()
+                                navController.navigate("login") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                                Log.d("SignUpScreen", "Google user data already exists, logging out")
+                                return@collect
+                            }
+                        }
+
+                        navController.navigate("profile") {
+                            Log.d("SignUpScreen", "Navigating to profile (Google)")
+                            popUpTo(Screen.Register.route) { inclusive = true }
+                        }
+                    }
                 }
             }
+
             is Resource.Failure -> {
-                Toast.makeText(context, state.exception.message ?: "Auth failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, state.exception.message ?: "Google auth failed", Toast.LENGTH_SHORT).show()
             }
+
             is Resource.Loading, null -> Unit
         }
     }
+
+    //FACEBOOK AUTH
+    LaunchedEffect(facebookState) {
+        when (val state = facebookState) {
+            is Resource.Success -> {
+                val uid = authViewModel.currentUser?.uid
+                if (uid != null) {
+                    authViewModel.getUser(uid).collect { user ->
+                        if (user != null) {
+                            val hasData = listOf(
+                                user.firstName, user.lastName, user.birthday, user.gender,
+                                user.job, user.location, user.description, user.avatarUrl
+                            ).any { it != null && it.toString().isNotBlank() }
+                            val hasInterests = user.interests?.isNotEmpty() == true
+                            val hasImages = user.imageUrl?.isNotEmpty() == true
+
+                            if (hasData || hasInterests || hasImages) {
+                                authViewModel.logout(profileViewModel)
+                                profileViewModel.clearUser()
+                                Toast.makeText(context, "This account already exists. Please log in.", Toast.LENGTH_LONG).show()
+                                navController.navigate("login") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                                Log.d("SignUpScreen", "Facebook user data already exists, logging out")
+                                return@collect
+                            }
+                        }
+
+                        navController.navigate("profile") {
+                            Log.d("SignUpScreen", "Navigating to profile (Facebook)")
+                            popUpTo(Screen.Register.route) { inclusive = true }
+                        }
+                    }
+                }
+            }
+
+            is Resource.Failure -> {
+                Toast.makeText(context, state.exception.message ?: "Facebook auth failed", Toast.LENGTH_SHORT).show()
+            }
+
+            is Resource.Loading, null -> Unit
+        }
+    }
+
+
 
     // --- UI ---
     Column(
@@ -200,7 +284,7 @@ fun SignUpScreen(
                 iconRes = R.drawable.ic_google,
                 contentDescription = "Google",
                 onClick = {
-                    viewModel.performGoogleSignIn(context) { intent ->
+                    authViewModel.performGoogleSignIn(context) { intent ->
                         googleLauncher.launch(intent)
                     }
                 },

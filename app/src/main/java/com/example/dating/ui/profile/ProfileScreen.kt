@@ -41,43 +41,10 @@ import com.example.dating.data.model.User
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
     val userState by viewModel.user.collectAsState()
 
-    // Add this state to ensure check runs only once per entry
-    var checkedExistingUser by remember { mutableStateOf(false) }
-
-    LaunchedEffect(userState) {
-        if (!checkedExistingUser && userState != null) {
-            val user = userState!!
-            val hasData = listOf(
-                user.firstName,
-                user.lastName,
-                user.birthday,
-                user.gender,
-                user.job,
-                user.location,
-                user.description,
-                user.avatarUrl
-            ).any { it != null && it.toString().isNotBlank() }
-            val hasInterests = user.interests?.isNotEmpty() == true
-            val hasImages = user.imageUrl?.isNotEmpty() == true
-
-            if (hasData || hasInterests || hasImages) {
-                checkedExistingUser = true // Mark as checked so it doesn't run again
-                authViewModel.logout(viewModel)
-                viewModel.clearUser()
-                Toast.makeText(context, "This account already exists. Please log in.", Toast.LENGTH_LONG).show()
-                navController.navigate("login") {
-                    popUpTo("login") { inclusive = true }
-                }
-            }
-
-        }
-    }
 
     var firstName by remember { mutableStateOf(userState?.firstName ?: "") }
     var lastName by remember { mutableStateOf(userState?.lastName ?: "") }
