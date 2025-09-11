@@ -27,81 +27,100 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalContext
+import com.example.dating.ui.auth.LocalFacebookCallbackManager
+import com.facebook.CallbackManager
+import com.facebook.login.LoginManager
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
+fun LoginScreen(viewModel: AuthViewModel, navController: NavController) {
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // State variables
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    // Prevent auto-navigation to home if user is logged out
-    val authResource = viewModel?.loginFlow?.collectAsState()
-    val isLoggedOut = authResource?.value is Resource.Failure &&
-        (authResource.value as? Resource.Failure)?.exception?.message == "User logged out"
-
-    // Add this derived state for login failure
-    val isLoginFailed = authResource?.value is Resource.Failure &&
-        (authResource.value as? Resource.Failure)?.exception?.message != "User logged out"
-
     var isEmailFocused by remember { mutableStateOf(false) }
     var isPasswordFocused by remember { mutableStateOf(false) }
     var loginClicked by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-    val context = LocalContext.current
-    val googleSignInState = viewModel?.googleSignInFlow?.collectAsState()
+
+    // Observe state from ViewModel
+    val authResource = viewModel.loginFlow.collectAsState()
+    val googleState = viewModel.googleSignInFlow.collectAsState().value
+    val facebookState = viewModel.facebookSignInFlow.collectAsState().value
+
+    val isLoggedOut = authResource.value is Resource.Failure &&
+            (authResource.value as? Resource.Failure)?.exception?.message == "User logged out"
+    val isLoginFailed = authResource.value is Resource.Failure &&
+            (authResource.value as? Resource.Failure)?.exception?.message != "User logged out"
+
+    // Google launcher
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)
-            account?.idToken?.let { token ->
-                Log.d("GoogleSignIn", "ID Token received: ${token.take(10)}...")
-                viewModel?.signupWithGoogle(token)
-            } ?: run {
-                Log.e("GoogleSignIn", "ID Token is null")
-                Toast.makeText(context, "Failed to get Google Sign In token", Toast.LENGTH_SHORT).show()
+            val idToken = account?.idToken
+            if (!idToken.isNullOrEmpty()) {
+                viewModel.signupWithGoogle(idToken)
+            } else {
+                Toast.makeText(context, "Failed to get Google token", Toast.LENGTH_SHORT).show()
             }
         } catch (e: ApiException) {
-            Log.e("GoogleSignIn", "Sign in failed: ${e.message}")
-            Toast.makeText(context, "Google Sign In failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Observe Google Sign-In state
-    LaunchedEffect(googleSignInState?.value) {
-        if (isLoggedOut || viewModel.currentUser == null) return@LaunchedEffect
-        // Don't navigate to home if just logged out
-        when (val state = googleSignInState?.value) {
+    // Facebook callback setup
+    val callbackManager = LocalFacebookCallbackManager.current
+
+    LaunchedEffect(Unit) {
+        com.facebook.login.LoginManager.getInstance().registerCallback(
+            callbackManager,
+            object : com.facebook.FacebookCallback<com.facebook.login.LoginResult> {
+                override fun onSuccess(result: com.facebook.login.LoginResult) {
+                    val token = result.accessToken.token
+                    viewModel.signupWithFacebook(token)
+                }
+
+                override fun onCancel() {
+                    Toast.makeText(context, "Facebook login canceled", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onError(error: com.facebook.FacebookException) {
+                    Toast.makeText(context, "Facebook login failed: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+
+    // Navigate on success (Google or Facebook)
+    LaunchedEffect(googleState, facebookState) {
+        val state = googleState ?: facebookState
+        when (state) {
             is Resource.Success -> {
-                Log.d("GoogleSignIn", "Authentication successful")
                 navController.navigate("home") {
                     popUpTo("login") { inclusive = true }
                 }
             }
+
             is Resource.Failure -> {
-                Log.e("GoogleSignIn", "Authentication failed: ${state.exception.message}")
-                Toast.makeText(
-                    context,
-                    "Authentication failed: ${state.exception.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, state.exception.message ?: "Login failed", Toast.LENGTH_SHORT).show()
             }
-            is Resource.Loading -> {
-                Log.d("GoogleSignIn", "Authentication in progress...")
-            }
-            null -> { /* Initial state */ }
+
+            is Resource.Loading, null -> Unit
         }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) {
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
                 focusManager.clearFocus()
             }
     ) {
@@ -114,10 +133,14 @@ fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
         ) {
             Text(
                 text = "Login",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.headlineLarge.fontSize),
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = MaterialTheme.typography.headlineLarge.fontSize
+                ),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
+            // Email input
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -125,24 +148,18 @@ fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        isEmailFocused = focusState.isFocused
-                    },
+                    .onFocusChanged { isEmailFocused = it.isFocused },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor =  AppColors.Text_Pink,
-                    focusedLabelColor =  AppColors.Text_Pink,
+                    focusedBorderColor = AppColors.Text_Pink,
+                    focusedLabelColor = AppColors.Text_Pink,
                     unfocusedBorderColor = if (isLoginFailed && !isEmailFocused) Color.Red else Color.LightGray,
                     unfocusedLabelColor = if (isLoginFailed && !isEmailFocused) Color.Red else Color.Black
                 ),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    autoCorrectEnabled = false,
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                )
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
             )
 
+            // Password input
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -150,9 +167,7 @@ fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        isPasswordFocused = focusState.isFocused
-                    },
+                    .onFocusChanged { isPasswordFocused = it.isFocused },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AppColors.Text_Pink,
@@ -161,29 +176,25 @@ fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
                     unfocusedLabelColor = if (isLoginFailed && !isPasswordFocused) Color.Red else Color.Black
                 ),
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    autoCorrectEnabled = false,
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next
-                )
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
             )
 
+            // Email/password login
             Button(
                 onClick = {
                     loginClicked = true
-                    viewModel?.loginUser(email, password)
+                    viewModel.loginUser(email, password)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Main_Secondary1,
+                    containerColor = AppColors.Main_Secondary1,
                     contentColor = Color.Black,
                 )
             ) {
                 Text("Login", style = MaterialTheme.typography.titleMedium)
             }
 
-            // Add Google login button below password field
+            // Google Sign-In button
             Button(
                 onClick = {
                     viewModel?.performGoogleSignIn(context) { intent ->
@@ -209,6 +220,35 @@ fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
                 Text("Login with Google")
             }
 
+            // Facebook Sign-In button
+
+            Button(
+                onClick = {
+                    LoginManager.getInstance().logOut()
+                    LoginManager.getInstance().logInWithReadPermissions(
+                        context as? androidx.activity.ComponentActivity ?: return@Button,
+                        listOf("email", "public_profile")
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = com.example.dating.R.drawable.ic_facebook),
+                    contentDescription = "Facebook",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Login with Facebook")
+            }
+            // Redirect to Sign Up
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -219,65 +259,44 @@ fun LoginScreen(viewModel: AuthViewModel , navController: NavController) {
                     },
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "Don't have an account? ",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Sign up",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                    color = AppColors.Text_Pink
-                )
+                Text("Don't have an account? ", color = MaterialTheme.colorScheme.onSurface)
+                Text("Sign up", fontWeight = FontWeight.Bold, color = AppColors.Text_Pink)
             }
 
+            // Show login feedback
             if (loginClicked) {
-                authResource?.value?.let {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.CenterHorizontally)
-                    ) {
-                        when (it) {
-                            is Resource.Failure -> {
-                                // Clear focus on failure
-                                LaunchedEffect(Unit) {
-                                    isEmailFocused = false
-                                    isPasswordFocused = false
-                                    focusManager.clearFocus()
-                                    loginClicked = false
-                                }
-                                Text(
-                                    text = it.exception.message ?: "Login failed",
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier
-                                        .padding(top = 16.dp)
-                                        .align(Alignment.Center)
-                                )
+                authResource.value.let {
+                    when (it) {
+                        is Resource.Loading -> {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                        }
+
+                        is Resource.Failure -> {
+                            LaunchedEffect(Unit) {
+                                loginClicked = false
+                                focusManager.clearFocus()
                             }
-                            is Resource.Loading -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            }
-                            is Resource.Success -> {
-                                LaunchedEffect(Unit) {
-                                    if (!isLoggedOut) {
-                                        navController.navigate("home") {
-                                            popUpTo("login") { inclusive = true }
-                                            launchSingleTop = true
-                                        }
+                            Text(
+                                text = it.exception.message ?: "Login failed",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
+
+                        is Resource.Success -> {
+                            LaunchedEffect(Unit) {
+                                if (!isLoggedOut) {
+                                    navController.navigate("home") {
+                                        popUpTo("login") { inclusive = true }
                                     }
                                     loginClicked = false
-
                                 }
                             }
                         }
+                        else -> { /* No-op */}
                     }
                 }
             }
         }
-
-
     }
 }

@@ -97,6 +97,7 @@ fun SignUpScreen(
         val state = googleState ?: facebookState
         when (state) {
             is Resource.Success -> {
+                // Navigate to home for both Google and Facebook sign-in success
                 navController.navigate("profile") {
                     popUpTo(Screen.Register.route) { inclusive = true }
                 }
