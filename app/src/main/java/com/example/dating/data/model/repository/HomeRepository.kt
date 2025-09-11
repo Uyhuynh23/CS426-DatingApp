@@ -4,6 +4,9 @@ import com.example.dating.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,9 +17,9 @@ class HomeRepository @Inject constructor(
     private val filteringRepository: FilteringRepository, // Remove RecommendationRepository injection
     private val recommendationRepository: RecommendationRepository // Remove RecommendationRepository injection
 ) {
-    suspend fun fetchProfiles(): List<String> {
+    suspend fun fetchProfiles(): List<String> = coroutineScope {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
-        if (currentUserId == null) return emptyList()
+        if (currentUserId == null) return@coroutineScope emptyList()
         val currentUserDoc = db.collection("users").document(currentUserId).get().await()
         val prefsMap = currentUserDoc.get("filterPreferences") as? Map<*, *>
         val filterPrefs = prefsMap?.let {
@@ -28,11 +31,13 @@ class HomeRepository @Inject constructor(
             )
         }
         val snapshot = db.collection("users").get().await()
-        val filteredDocs = snapshot.documents.filter { doc ->
-            //Get shared preferences of the document
-            doc.get("filterPreferences") // Just to ensure the field exists
-            filteringRepository.filterUser(doc, currentUserId, currentUserDoc, filterPrefs)
-        }
+        val filteredDocs = snapshot.documents.map { doc ->
+            async {
+                val notMatched = !filteringRepository.isMatched(currentUserId, doc.id)
+                val passesFilter = filteringRepository.filterUser(doc, currentUserId, currentUserDoc, filterPrefs)
+                doc to (notMatched && passesFilter)
+            }
+        }.awaitAll().filter { it.second }.map { it.first }
         // Get current user object for recommendation
         val currentUser = getUserProfilesByIds(listOf(currentUserId)).firstOrNull()
         val users = getUserProfilesByIds(filteredDocs.map { it.id })
@@ -46,7 +51,7 @@ class HomeRepository @Inject constructor(
         }
         val uids = sortedDocs.map { it.uid }
         android.util.Log.d("HomeRepository", "Filtered & Sorted UIDs: $uids")
-        return uids
+        uids
     }
 
     suspend fun getUserProfilesByIds(userIds: List<String>): List<User> {

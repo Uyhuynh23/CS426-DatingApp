@@ -3,6 +3,8 @@ package com.example.dating.data.model.repository
 import com.example.dating.data.model.UserFilterPreferences
 import com.example.dating.data.model.utils.DateUtils
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class FilteringRepository @Inject constructor() {
@@ -75,5 +77,15 @@ class FilteringRepository @Inject constructor() {
                 Math.sin(dLon / 2) * Math.sin(dLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         return R * c
+    }
+
+    suspend fun isMatched(currentUserId: String, candidateId: String): Boolean {
+        val db = FirebaseFirestore.getInstance()
+        val (firstId, secondId) = if (currentUserId < candidateId) currentUserId to candidateId else candidateId to currentUserId
+        val query = db.collection("match")
+            .whereEqualTo("userId1", firstId)
+            .whereEqualTo("userId2", secondId)
+            .get().await()
+        return !query.isEmpty
     }
 }
