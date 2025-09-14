@@ -78,23 +78,19 @@ fun ChatDetailScreen(
     val peerAvatar by viewModel.peerAvatar.collectAsState(initial = null)
     val groupedMessages by viewModel.groupedMessages.collectAsState()
     val lastActive by viewModel.lastActive.collectAsState()
-    val peerUid by viewModel.peerUid.collectAsState() // <-- Add this line
+    val peerUid by viewModel.peerUid.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState(initial = false) // <-- Use isOnline from viewModel
 
     LaunchedEffect(conversationId) {
         viewModel.loadMessages(conversationId)
         viewModel.loadPeer(conversationId)
-        //set user as active
         viewModel.setActive(conversationId, true)
     }
     DisposableEffect(conversationId) {
         onDispose {
-            // Set user as inactive when leaving the screen
             viewModel.setActive(conversationId, false)
         }
     }
-
-    // Online detection: consider online if lastActive within 2 minutes
-    val isOnline = lastActive?.let { System.currentTimeMillis() - it < 2 * 60 * 1000 } ?: false
 
     // đảm bảo thứ tự cũ -> mới, và tự cuộn xuống cuối
     val listState = rememberLazyListState()
@@ -117,7 +113,7 @@ fun ChatDetailScreen(
             title = "Messages",
             name = peerName,
             avatarUrl = peerAvatar,
-            online = isOnline,
+            online = isOnline, // <-- Pass isOnline from viewModel
             navController = navController,
             lastActive = lastActive,
             onBack = { navController.popBackStack() },
