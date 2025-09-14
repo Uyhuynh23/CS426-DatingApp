@@ -87,16 +87,6 @@ fun ProfileScreen(
             ) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppColors.Text_Pink,)
             }
-
-            // Skip
-            Text(
-                text = "Skip",
-                color = AppColors.Text_Pink,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .clickable { navController.navigate("gender_select") }
-            )
         }
 
 
