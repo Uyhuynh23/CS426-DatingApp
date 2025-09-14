@@ -31,24 +31,22 @@ class ChatRepository(
     suspend fun getPeerInfoWithUid(conversationId: String): PeerInfoResult {
         val doc = db.collection("conversations").document(conversationId).get().await()
         val currentUid = auth.currentUser?.uid
-        val participants = doc.get("participants") as? List<String> ?: return PeerInfoResult("", "", null, null, false)
-        val peerId = participants.find { it != currentUid } ?: return PeerInfoResult("", "", null, null, false)
+        val participants = doc.get("participants") as? List<String> ?: return PeerInfoResult("", "", null, null)
+        val peerId = participants.find { it != currentUid } ?: return PeerInfoResult("", "", null, null)
         val userDoc = db.collection("users").document(peerId).get().await()
         val firstName = userDoc.getString("firstName") ?: ""
         val lastName = userDoc.getString("lastName") ?: ""
         val name = "$firstName $lastName".trim()
         val photoUrl = userDoc.getString("avatarUrl") ?: ""
         val lastActive = userDoc.getLong("lastActive") // <-- may be null
-        val isOnline = userDoc.getBoolean("isOnline") ?: false
-        return PeerInfoResult(name, photoUrl, lastActive, peerId, isOnline)
+        return PeerInfoResult(name, photoUrl, lastActive, peerId)
     }
 
     data class PeerInfoResult(
         val name: String,
         val photoUrl: String,
         val lastActive: Long?,
-        val peerUid: String?,
-        val isOnline: Boolean // <-- Add isOnline here
+        val peerUid: String?
     )
 
     fun getMessagesRealtime(conversationId: String): Flow<List<ChatMessage>> = callbackFlow {

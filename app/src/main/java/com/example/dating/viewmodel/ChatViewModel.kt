@@ -38,18 +38,15 @@ class ChatViewModel @Inject constructor(
     private val _peerUid = MutableStateFlow<String?>(null)
     val peerUid: StateFlow<String?> = _peerUid
 
-    private val _isOnline = MutableStateFlow<Boolean>(false)
-    val isOnline: StateFlow<Boolean> = _isOnline
     private val chatRepository = ChatRepository(db, auth)
 
     fun loadPeer(conversationId: String) {
         viewModelScope.launch {
-            val peerInfo = chatRepository.getPeerInfoWithUid(conversationId)
-            _peerName.value = peerInfo.name
-            _peerAvatar.value = peerInfo.photoUrl
-            _lastActive.value = peerInfo.lastActive // may be null
-            _peerUid.value = peerInfo.peerUid
-            _isOnline.value = peerInfo.isOnline
+            val (name, photoUrl, lastActive, peerUid) = chatRepository.getPeerInfoWithUid(conversationId)
+            _peerName.value = name
+            _peerAvatar.value = photoUrl
+            _lastActive.value = lastActive // may be null
+            _peerUid.value = peerUid
         }
     }
 
