@@ -83,7 +83,7 @@ fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel =
                 PostStoryScreen(
                     navController = nav,
                     postState = postState,
-                    onPost = { caption, uris -> storyViewModel.postStories(caption, uris) },
+                    onPost = { caption, uris, transforms -> storyViewModel.postStories(caption, uris, transforms) },
                     onClearState = { storyViewModel.clearPostState() }
                 )
             }

@@ -1,6 +1,7 @@
 package com.example.dating.data.model.repository
 
 import android.net.Uri
+import com.example.dating.data.model.ImageTransform
 import com.example.dating.data.model.Story
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -34,7 +35,7 @@ class FirebaseStoryRepository @Inject constructor(
         awaitClose { reg.remove() }
     }
 
-    override suspend fun postStories(caption: String?, media: List<Uri>): List<Story> {
+    override suspend fun postStories(caption: String?, media: List<Uri>, transforms: List<ImageTransform>): List<Story> {
         val me = auth.currentUser ?: error("Not signed in")
         val ownerUid = me.uid
         val now = System.currentTimeMillis()
@@ -42,7 +43,7 @@ class FirebaseStoryRepository @Inject constructor(
 
         val created = mutableListOf<Story>()
 
-        for (uri in media) {
+        for ((index, uri) in media.withIndex()) {
             val storyId = UUID.randomUUID().toString()
             val filename = uri.lastPathSegment?.substringAfterLast('/') ?: "media"
             val objectPath = "stories/$ownerUid/$storyId/$filename"
@@ -52,9 +53,12 @@ class FirebaseStoryRepository @Inject constructor(
             ref.putFile(uri).await()
             val url = ref.downloadUrl.await().toString()
 
+            // Get the corresponding transform for this image
+            val transform = transforms.getOrNull(index)
+
             // doc
             val doc = items(ownerUid).document(storyId)
-            val data = mapOf(
+            val data = mutableMapOf<String, Any?>(
                 "id" to storyId,
                 "ownerUid" to ownerUid,
                 "mediaUrl" to url,
@@ -63,13 +67,30 @@ class FirebaseStoryRepository @Inject constructor(
                 "expiresAt" to exp,
                 "seenBy" to emptyList<String>()
             )
+
+            // Add image transform data if available
+            if (transform != null) {
+                data["imageTransform"] = mapOf(
+                    "scaleX" to transform.scaleX,
+                    "scaleY" to transform.scaleY,
+                    "translationX" to transform.translationX,
+                    "translationY" to transform.translationY,
+                    "rotationZ" to transform.rotationZ
+                )
+            }
+
             doc.set(data).await()
 
             // read back (optional) to include server ts
             val snap = doc.get().await()
             created += (snap.toObject(Story::class.java) ?: Story(
-                id = storyId, ownerUid = ownerUid, mediaUrl = url, caption = caption,
-                createdAt = Timestamp(now / 1000, 0), expiresAt = exp
+                id = storyId,
+                ownerUid = ownerUid,
+                mediaUrl = url,
+                caption = caption,
+                createdAt = Timestamp(now / 1000, 0),
+                expiresAt = exp,
+                imageTransform = transform
             ))
         }
         return created

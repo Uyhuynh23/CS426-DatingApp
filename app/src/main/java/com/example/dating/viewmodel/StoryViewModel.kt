@@ -3,6 +3,7 @@ package com.example.dating.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dating.data.model.ImageTransform
 import com.example.dating.data.model.Resource
 import com.example.dating.data.model.Story
 import com.example.dating.data.model.repository.StoryRepository
@@ -43,12 +44,12 @@ class StoryViewModel @Inject constructor(
         return state
     }
 
-    fun postStories(caption: String?, uris: List<Uri>) {
+    fun postStories(caption: String?, uris: List<Uri>, transforms: List<ImageTransform> = emptyList()) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
             _postState.value = Resource.Loading
             try {
-                val res = repo.postStories(caption, uris)
+                val res = repo.postStories(caption, uris, transforms)
                 _postState.value = Resource.Success(res)
             } catch (e: Exception) {
                 _postState.value = Resource.Failure(e)
