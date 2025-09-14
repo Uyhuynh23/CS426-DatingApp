@@ -63,6 +63,7 @@ fun OnboardingScreen(navController: NavController) {
 
     Column(
         modifier = Modifier
+            .systemBarsPadding()
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.onPrimary),
         horizontalAlignment = Alignment.CenterHorizontally,
