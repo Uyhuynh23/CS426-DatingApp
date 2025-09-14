@@ -232,18 +232,6 @@ fun SignUpScreen(
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) { Text("Continue with email") }
 
-        Spacer(Modifier.height(16.dp))
-
-        // Phone
-        Button(
-            onClick = { navController.navigate("phone_number") },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4A154B),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().height(56.dp)
-        ) { Text("Use phone number") }
 
         Spacer(Modifier.height(36.dp))
 
