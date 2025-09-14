@@ -28,6 +28,8 @@ class MainActivity : ComponentActivity() {
         // Tell Android not to fit system windows automatically (we'll handle it in Compose)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        window.statusBarColor = android.graphics.Color.BLACK
+        window.navigationBarColor = android.graphics.Color.BLACK
 
         // Facebook SDK init
         FacebookSdk.sdkInitialize(applicationContext)

@@ -1,5 +1,6 @@
 package com.example.dating.ui.onboarding
 
+import android.app.Activity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,11 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.dating.R
@@ -34,6 +38,22 @@ data class OnboardingPage(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(navController: NavController) {
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+
+            // Transparent background để ăn màu UI phía dưới
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+
+            // Điều chỉnh màu icon chữ của status bar
+            val insetsController = WindowInsetsControllerCompat(window, view)
+            insetsController.isAppearanceLightStatusBars = true // icon đen
+            // đổi thành false nếu muốn icon trắng
+        }
+    }
 
     val pages = listOf(
         OnboardingPage(
